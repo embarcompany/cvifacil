@@ -17,23 +17,90 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "CVI para Cães e Gatos | Orientação Online pelo WhatsApp | CVI Fácil",
-  description: "Vai viajar com seu pet para o exterior? Receba orientação para organizar o CVI de cães e gatos, com análise do destino, prazos e acompanhamento pelo WhatsApp.",
-  robots: "index, follow",
+  metadataBase: new URL("https://cvifacil.com.br"),
+  title: {
+    default: "CVI Fácil | CVI para cães e gatos em viagens internacionais",
+    template: "%s | CVI Fácil",
+  },
+  description:
+    "Assessoria online para organizar o CVI de cães e gatos em viagens internacionais, com análise do destino, checklist de documentos, prazos e suporte humano pelo WhatsApp.",
+  applicationName: "CVI Fácil",
+  generator: "Next.js",
+  referrer: "origin-when-cross-origin",
+  keywords: [
+    "CVI",
+    "CVI para cães",
+    "CVI para gatos",
+    "Certificado Veterinário Internacional",
+    "viagem internacional com pet",
+    "documentação pet viagem internacional",
+    "assessoria CVI",
+    "CVI online",
+    "passaporte pet",
+    "sorologia raiva",
+    "MAPA pets",
+  ],
+  authors: [{ name: "CVI Fácil", url: "https://cvifacil.com.br" }],
+  creator: "CVI Fácil",
+  publisher: "CVI Fácil",
+  category: "pet travel documentation",
+  alternates: {
+    canonical: "/",
+    languages: {
+      "pt-BR": "/",
+    },
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
-    title: "CVI para Cães e Gatos | Orientação Online pelo WhatsApp | CVI Fácil",
-    description: "Vai viajar com seu pet para o exterior? Receba orientação para organizar o CVI de cães e gatos.",
-    url: "https://cvifacil.com.br", // placeholder
+    title: "CVI Fácil | CVI para cães e gatos em viagens internacionais",
+    description:
+      "Organize o CVI do seu pet com suporte online, checklist de documentos e acompanhamento até a emissão.",
+    url: "/",
     siteName: "CVI Fácil",
     images: [
       {
-        url: "/assets/logo-cvi-facil.png", // placeholder
-        width: 800,
-        height: 600,
+        url: "/assets/hero-pets-viagem.png",
+        width: 1200,
+        height: 1200,
+        alt: "Cão e gato prontos para viagem internacional com CVI Fácil",
       },
     ],
     locale: "pt_BR",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CVI Fácil | CVI para cães e gatos",
+    description:
+      "Assessoria online para organizar o CVI do seu pet em viagens internacionais.",
+    images: ["/assets/hero-pets-viagem.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/assets/logo-cvi-facil.png",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+  other: {
+    "geo.region": "BR",
+    "geo.placename": "Brasil",
+    "business:contact_data:country_name": "Brasil",
+    "ai-content-declaration":
+      "Página comercial sobre assessoria documental para CVI de cães e gatos em viagens internacionais.",
   },
 };
 

@@ -510,8 +510,86 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://cvifacil.com.br/#organization",
+        name: "CVI Fácil",
+        url: "https://cvifacil.com.br",
+        logo: "https://cvifacil.com.br/assets/logo-cvi-facil.png",
+        email: "contato@cvifacil.com.br",
+        taxID: "29.922.919/0001-14",
+        areaServed: {
+          "@type": "Country",
+          name: "Brasil",
+        },
+        knowsAbout: [
+          "CVI para cães",
+          "CVI para gatos",
+          "Certificado Veterinário Internacional",
+          "documentação para viagem internacional com pets",
+          "sorologia de raiva",
+          "exigências sanitárias para cães e gatos",
+        ],
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://cvifacil.com.br/#website",
+        url: "https://cvifacil.com.br",
+        name: "CVI Fácil",
+        inLanguage: "pt-BR",
+        publisher: {
+          "@id": "https://cvifacil.com.br/#organization",
+        },
+      },
+      {
+        "@type": "Service",
+        "@id": "https://cvifacil.com.br/#service",
+        name: "Assessoria online para CVI de cães e gatos",
+        serviceType: "Assessoria documental para Certificado Veterinário Internacional",
+        provider: {
+          "@id": "https://cvifacil.com.br/#organization",
+        },
+        areaServed: {
+          "@type": "Country",
+          name: "Brasil",
+        },
+        audience: {
+          "@type": "Audience",
+          audienceType: "Tutores de cães e gatos que vão viajar para o exterior",
+        },
+        description:
+          "Orientação e acompanhamento para organizar o CVI de cães e gatos em viagens internacionais, com análise de destino, prazos, documentos e suporte pelo WhatsApp.",
+        offers: {
+          "@type": "Offer",
+          availability: "https://schema.org/InStock",
+          url: "https://cvifacil.com.br/#avaliacao",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://cvifacil.com.br/#faq",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+
       {/* ==========================================
           HEADER
           ========================================== */}

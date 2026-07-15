@@ -2266,6 +2266,18 @@ export default function Home() {
       {/* ==========================================
           FLOATING ELEMENTS & CRO WIDGETS
           ========================================== */}
+      {/* Desktop Chat Bubble */}
+      <div className="fixed bottom-6 right-6 z-40 hidden md:block">
+        <a
+          href="#avaliacao"
+          onClick={(e) => handleSmoothScroll(e, "avaliacao")}
+          className="group flex h-14 w-14 items-center justify-center rounded-full bg-whatsapp text-white shadow-[0_10px_24px_rgba(5,184,92,0.28)] transition-all duration-300 hover:scale-105 hover:bg-whatsapp-hover active:scale-95"
+          aria-label="Iniciar atendimento"
+        >
+          <MessageSquare className="h-6 w-6 transition-transform duration-300 group-hover:scale-105" />
+        </a>
+      </div>
+
       {/* Mobile Sticky Bar */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-white/95 backdrop-blur-md border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.05)] pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 ${
         scrolled ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"

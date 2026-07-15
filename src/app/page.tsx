@@ -890,7 +890,7 @@ export default function Home() {
                   { icon: <Headset className="w-5 h-5 text-white" />, title: "Suporte rápido", subtitle: "pelo WhatsApp" },
                   { icon: <Award className="w-5 h-5 text-white" />, title: "Especialistas em", subtitle: "documentação" }
                 ].map((item, idx) => (
-                  <div key={idx} className="micro-card flex h-full min-h-[92px] flex-col items-center justify-start gap-2 rounded-xl bg-white/5 px-2.5 py-3 text-center sm:min-h-[88px] sm:flex-row sm:justify-start sm:text-left lg:min-h-0 lg:px-2 lg:py-2">
+                  <div key={idx} className="micro-card flex h-full min-h-[92px] flex-col items-center justify-start gap-2 rounded-xl px-2.5 py-3 text-center sm:min-h-[88px] sm:flex-row sm:justify-start sm:text-left lg:min-h-0 lg:px-2 lg:py-2">
                     <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/20 flex items-center justify-center bg-white/5">
                       {item.icon}
                     </div>

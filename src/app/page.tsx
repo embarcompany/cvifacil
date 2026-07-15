@@ -2236,7 +2236,6 @@ export default function Home() {
                 <li><a href="#home" className="hover:text-primary transition-colors">Quem somos</a></li>
                 <li><a href="/politica-de-privacidade" className="hover:text-primary transition-colors">Política de Privacidade</a></li>
                 <li><a href="/termos-de-uso" className="hover:text-primary transition-colors">Termos de Uso</a></li>
-                <li><a href="/design-system" className="hover:text-primary transition-colors">Design System</a></li>
               </ul>
             </div>
 

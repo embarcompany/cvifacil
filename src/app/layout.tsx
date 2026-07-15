@@ -85,10 +85,18 @@ export const metadata: Metadata = {
       "Assessoria online para organizar o CVI do seu pet em viagens internacionais.",
     images: ["/assets/hero-pets-viagem.png"],
   },
+  manifest: "/site.webmanifest",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+    ],
     shortcut: "/favicon.ico",
-    apple: "/assets/logo-cvi-facil.png",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   formatDetection: {
     telephone: false,
@@ -99,6 +107,8 @@ export const metadata: Metadata = {
     "geo.region": "BR",
     "geo.placename": "Brasil",
     "business:contact_data:country_name": "Brasil",
+    "msapplication-TileColor": "#ffffff",
+    "msapplication-TileImage": "/mstile-150x150.png",
     "ai-content-declaration":
       "Página comercial sobre assessoria documental para CVI de cães e gatos em viagens internacionais.",
   },

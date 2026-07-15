@@ -31,7 +31,7 @@ export function TrustStrip() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
           {items.map((item, idx) => (
             <div key={idx} className="flex items-center gap-4 px-4 sm:px-0 justify-center sm:justify-start">
-              <div className="flex-shrink-0 w-11 h-11 rounded-full border border-white/20 flex items-center justify-center bg-white/5">
+              <div className="flex-shrink-0 w-11 h-11 rounded-full border border-white/20 flex items-center justify-center">
                 {item.icon}
               </div>
               <div>

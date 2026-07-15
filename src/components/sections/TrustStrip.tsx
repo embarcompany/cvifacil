@@ -20,7 +20,7 @@ export function TrustStrip() {
     },
     {
       icon: <Award className="w-5 h-5 text-white" />,
-      title: "Especialistas ema",
+      title: "Especialistas em",
       subtitle: "documentação",
     },
   ];

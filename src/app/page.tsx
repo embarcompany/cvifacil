@@ -108,6 +108,15 @@ const embarkTestimonialsBottom: EmbarkTestimonial[] = [
 const embarkTestimonialsTopLoop = [...embarkTestimonialsTop, ...embarkTestimonialsTop];
 const embarkTestimonialsBottomLoop = [...embarkTestimonialsBottom, ...embarkTestimonialsBottom];
 
+const destinationOptions = [
+  { value: "Estados Unidos", label: "Estados Unidos", flag: "🇺🇸", hint: "Destino comum para cães e gatos" },
+  { value: "Portugal", label: "Portugal", flag: "🇵🇹", hint: "Viagens frequentes saindo do Brasil" },
+  { value: "União Europeia", label: "União Europeia", flag: "🇪🇺", hint: "França, Espanha, Itália e outros países" },
+  { value: "Reino Unido", label: "Reino Unido", flag: "🇬🇧", hint: "Exigências específicas para entrada" },
+  { value: "Canadá", label: "Canadá", flag: "🇨🇦", hint: "Documentos e prazos revisados" },
+  { value: "Outro", label: "Outro país", flag: "🌎", hint: "Avaliamos o destino com você" },
+];
+
 function EmbarkTestimonialCard({ testimonial }: { testimonial: EmbarkTestimonial }) {
   return (
     <div className="whitespace-normal w-full md:w-[340px] bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_4px_15px_rgba(6,42,87,0.01)] shrink-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(6,42,87,0.07)]">
@@ -367,6 +376,8 @@ export default function Home() {
   const [formStep, setFormStep] = useState(1);
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
   const [showQuantityCounters, setShowQuantityCounters] = useState(false);
+  const [isDestinationOpen, setIsDestinationOpen] = useState(false);
+  const destinationDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
@@ -391,6 +402,20 @@ export default function Home() {
     document.addEventListener("click", handleAnchorClick, true);
     return () => document.removeEventListener("click", handleAnchorClick, true);
   }, [smoothScrollToTarget]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        destinationDropdownRef.current &&
+        !destinationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDestinationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -1531,21 +1556,102 @@ export default function Home() {
                       </div>
 
                       {/* 3. País de destino */}
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col gap-1.5" ref={destinationDropdownRef}>
                         <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">País de destino</label>
-                        <select 
-                          className={`h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.paisDestino ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
-                          value={formData.paisDestino}
-                          onChange={(e) => setFormData({ ...formData, paisDestino: e.target.value })}
-                        >
-                          <option value="">Selecione o país de destino</option>
-                          <option value="Estados Unidos">Estados Unidos 🇺🇸</option>
-                          <option value="Portugal">Portugal 🇵🇹</option>
-                          <option value="União Europeia">União Europeia (Outros) 🇪🇺</option>
-                          <option value="Reino Unido">Reino Unido 🇬🇧</option>
-                          <option value="Canadá">Canadá 🇨🇦</option>
-                          <option value="Outro">Outro País 🌎</option>
-                        </select>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded={isDestinationOpen}
+                            onClick={() => setIsDestinationOpen((open) => !open)}
+                            className={`group flex min-h-[62px] w-full items-center justify-between gap-3 rounded-xl border bg-white px-4 text-left transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 ${
+                              errors.paisDestino
+                                ? "border-red-500 focus:ring-red-500/10"
+                                : isDestinationOpen
+                                  ? "border-primary shadow-[0_8px_20px_rgba(17,130,186,0.08)]"
+                                  : "border-gray-200 hover:border-primary/40 hover:bg-blue-soft/30"
+                            }`}
+                          >
+                            {formData.paisDestino ? (
+                              (() => {
+                                const selectedDestination = destinationOptions.find((option) => option.value === formData.paisDestino);
+                                return (
+                                  <span className="flex min-w-0 items-center gap-3">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-[19px]">
+                                      {selectedDestination?.flag}
+                                    </span>
+                                    <span className="flex min-w-0 flex-col">
+                                      <span className="truncate text-[16px] font-extrabold text-navy">
+                                        {selectedDestination?.label}
+                                      </span>
+                                      <span className="truncate text-[12px] font-semibold text-text-muted">
+                                        {selectedDestination?.hint}
+                                      </span>
+                                    </span>
+                                  </span>
+                                );
+                              })()
+                            ) : (
+                              <span className="flex min-w-0 items-center gap-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-[18px]">
+                                  🌎
+                                </span>
+                                <span className="flex min-w-0 flex-col">
+                                  <span className="text-[16px] font-extrabold text-navy">Selecione o país</span>
+                                  <span className="text-[12px] font-semibold text-text-muted">Escolha o destino da viagem</span>
+                                </span>
+                              </span>
+                            )}
+                            <ChevronDown className={`h-5 w-5 shrink-0 text-primary transition-transform duration-200 ${isDestinationOpen ? "rotate-180" : ""}`} />
+                          </button>
+
+                          {isDestinationOpen && (
+                            <div
+                              role="listbox"
+                              className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 max-h-[310px] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(6,42,87,0.14)]"
+                            >
+                              {destinationOptions.map((option) => {
+                                const isSelected = formData.paisDestino === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => {
+                                      const restErrors = { ...errors };
+                                      delete restErrors.paisDestino;
+                                      setFormData({ ...formData, paisDestino: option.value });
+                                      setErrors(restErrors);
+                                      setIsDestinationOpen(false);
+                                      trackEvent("cvi_destination_selected", { destination: option.value });
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-150 ${
+                                      isSelected
+                                        ? "bg-primary text-white"
+                                        : "text-navy hover:bg-blue-soft"
+                                    }`}
+                                  >
+                                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] ${
+                                      isSelected ? "bg-white/18" : "bg-blue-soft"
+                                    }`}>
+                                      {option.flag}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate text-[15px] font-extrabold">{option.label}</span>
+                                      <span className={`block truncate text-[12px] font-semibold ${
+                                        isSelected ? "text-white/78" : "text-text-muted"
+                                      }`}>
+                                        {option.hint}
+                                      </span>
+                                    </span>
+                                    {isSelected && <Check className="h-4.5 w-4.5 shrink-0 text-white" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                         {errors.paisDestino && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.paisDestino}</span>}
                       </div>
 

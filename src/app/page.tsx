@@ -35,7 +35,8 @@ import {
   Info,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Globe2
 } from "lucide-react";
 
 // ==========================================
@@ -109,12 +110,12 @@ const embarkTestimonialsTopLoop = [...embarkTestimonialsTop, ...embarkTestimonia
 const embarkTestimonialsBottomLoop = [...embarkTestimonialsBottom, ...embarkTestimonialsBottom];
 
 const destinationOptions = [
-  { value: "Estados Unidos", label: "Estados Unidos", flag: "🇺🇸", hint: "Destino comum para cães e gatos" },
-  { value: "Portugal", label: "Portugal", flag: "🇵🇹", hint: "Viagens frequentes saindo do Brasil" },
-  { value: "União Europeia", label: "União Europeia", flag: "🇪🇺", hint: "França, Espanha, Itália e outros países" },
-  { value: "Reino Unido", label: "Reino Unido", flag: "🇬🇧", hint: "Exigências específicas para entrada" },
-  { value: "Canadá", label: "Canadá", flag: "🇨🇦", hint: "Documentos e prazos revisados" },
-  { value: "Outro", label: "Outro país", flag: "🌎", hint: "Avaliamos o destino com você" },
+  { value: "Estados Unidos", label: "Estados Unidos", hint: "Destino comum para cães e gatos" },
+  { value: "Portugal", label: "Portugal", hint: "Viagens frequentes saindo do Brasil" },
+  { value: "União Europeia", label: "União Europeia", hint: "França, Espanha, Itália e outros países" },
+  { value: "Reino Unido", label: "Reino Unido", hint: "Exigências específicas para entrada" },
+  { value: "Canadá", label: "Canadá", hint: "Documentos e prazos revisados" },
+  { value: "Outro", label: "Outro país", hint: "Avaliamos o destino com você" },
 ];
 
 function EmbarkTestimonialCard({ testimonial }: { testimonial: EmbarkTestimonial }) {
@@ -1577,8 +1578,8 @@ export default function Home() {
                                 const selectedDestination = destinationOptions.find((option) => option.value === formData.paisDestino);
                                 return (
                                   <span className="flex min-w-0 items-center gap-3">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-[19px]">
-                                      {selectedDestination?.flag}
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-primary">
+                                      <Globe2 className="h-4.5 w-4.5" />
                                     </span>
                                     <span className="flex min-w-0 flex-col">
                                       <span className="truncate text-[16px] font-extrabold text-navy">
@@ -1593,8 +1594,8 @@ export default function Home() {
                               })()
                             ) : (
                               <span className="flex min-w-0 items-center gap-3">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-[18px]">
-                                  🌎
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-primary">
+                                  <Globe2 className="h-4.5 w-4.5" />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
                                   <span className="text-[16px] font-extrabold text-navy">Selecione o país</span>
@@ -1632,10 +1633,10 @@ export default function Home() {
                                         : "text-navy hover:bg-blue-soft"
                                     }`}
                                   >
-                                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] ${
+                                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                                       isSelected ? "bg-white/18" : "bg-blue-soft"
                                     }`}>
-                                      {option.flag}
+                                      <Globe2 className={`h-4.5 w-4.5 ${isSelected ? "text-white" : "text-primary"}`} />
                                     </span>
                                     <span className="min-w-0 flex-1">
                                       <span className="block truncate text-[15px] font-extrabold">{option.label}</span>

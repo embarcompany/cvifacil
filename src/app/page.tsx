@@ -855,7 +855,7 @@ export default function Home() {
                       <img src="/assets/social-proof-06.png" alt="Família viajando tranquila com pet" className="object-cover w-full h-full" />
                     </div>
                   </div>
-                  <div className="flex flex-col items-start leading-none">
+                  <div className="flex flex-col items-start leading-none z-20">
                     <span className="text-[13px] font-extrabold text-navy max-w-[230px] leading-tight">
                       +1.000 tutores já viajaram tranquilo com a gente
                     </span>
@@ -1733,7 +1733,7 @@ export default function Home() {
                         <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Previsão da viagem</label>
                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:flex lg:flex-row lg:flex-nowrap gap-2 w-full select-none">
                           {[
-                            "De menos de 1 mês",
+                            "Menos de 1 mês",
                             "De 1 a 3 meses",
                             "De 3 a 6 meses",
                             "De 6 meses a 1 ano",

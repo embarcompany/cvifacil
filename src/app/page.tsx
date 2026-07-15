@@ -1627,25 +1627,13 @@ export default function Home() {
                                       setIsDestinationOpen(false);
                                       trackEvent("cvi_destination_selected", { destination: option.value });
                                     }}
-                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-150 ${
+                                    className={`flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-150 ${
                                       isSelected
                                         ? "bg-primary text-white"
                                         : "text-navy hover:bg-blue-soft"
                                     }`}
                                   >
-                                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                                      isSelected ? "bg-white/18" : "bg-blue-soft"
-                                    }`}>
-                                      <Globe2 className={`h-4.5 w-4.5 ${isSelected ? "text-white" : "text-primary"}`} />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                      <span className="block truncate text-[15px] font-extrabold">{option.label}</span>
-                                      <span className={`block truncate text-[12px] font-semibold ${
-                                        isSelected ? "text-white/78" : "text-text-muted"
-                                      }`}>
-                                        {option.hint}
-                                      </span>
-                                    </span>
+                                    <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold">{option.label}</span>
                                     {isSelected && <Check className="h-4.5 w-4.5 shrink-0 text-white" />}
                                   </button>
                                 );

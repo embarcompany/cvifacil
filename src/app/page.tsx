@@ -47,6 +47,7 @@ interface FormData {
   emailOuTelefone: string;
   tipoPet: "Cão" | "Gato" | "";
   paisDestino: string;
+  paisDestinoOutro: string;
   dataViagem: string;
   cidadeOrigem: string;
   emailOpcional: string;
@@ -60,6 +61,7 @@ interface FormErrors {
   nomeTutor?: string;
   emailOuTelefone?: string;
   paisDestino?: string;
+  paisDestinoOutro?: string;
   dataViagem?: string;
   tipoPet?: string;
   cidadeOrigem?: string;
@@ -110,12 +112,13 @@ const embarkTestimonialsTopLoop = [...embarkTestimonialsTop, ...embarkTestimonia
 const embarkTestimonialsBottomLoop = [...embarkTestimonialsBottom, ...embarkTestimonialsBottom];
 
 const destinationOptions = [
-  { value: "Estados Unidos", label: "Estados Unidos", hint: "Destino comum para cães e gatos" },
-  { value: "Portugal", label: "Portugal", hint: "Viagens frequentes saindo do Brasil" },
-  { value: "União Europeia", label: "União Europeia", hint: "França, Espanha, Itália e outros países" },
-  { value: "Reino Unido", label: "Reino Unido", hint: "Exigências específicas para entrada" },
-  { value: "Canadá", label: "Canadá", hint: "Documentos e prazos revisados" },
-  { value: "Outro", label: "Outro país", hint: "Avaliamos o destino com você" },
+  { value: "Estados Unidos", label: "Estados Unidos", flag: "🇺🇸", hint: "Destino comum para cães e gatos" },
+  { value: "Portugal", label: "Portugal", flag: "🇵🇹", hint: "Viagens frequentes saindo do Brasil" },
+  { value: "Mercosul", label: "Mercosul", flag: "🌎", hint: "Argentina, Uruguai, Paraguai e região" },
+  { value: "União Europeia", label: "União Europeia", flag: "🇪🇺", hint: "França, Espanha, Itália e outros países" },
+  { value: "Reino Unido", label: "Reino Unido", flag: "🇬🇧", hint: "Exigências específicas para entrada" },
+  { value: "Canadá", label: "Canadá", flag: "🇨🇦", hint: "Documentos e prazos revisados" },
+  { value: "Outro", label: "Outro país", flag: "🌐", hint: "Avaliamos o destino com você" },
 ];
 
 function EmbarkTestimonialCard({ testimonial }: { testimonial: EmbarkTestimonial }) {
@@ -175,6 +178,7 @@ export default function Home() {
     emailOuTelefone: "",
     tipoPet: "",
     paisDestino: "",
+    paisDestinoOutro: "",
     dataViagem: "",
     cidadeOrigem: "",
     emailOpcional: "",
@@ -218,11 +222,14 @@ export default function Home() {
     e.preventDefault();
     if (!validateStep3()) return;
     setIsSubmitting(true);
+    const destinoFinal = formData.paisDestino === "Outro"
+      ? formData.paisDestinoOutro.trim()
+      : formData.paisDestino;
     trackEvent("cvi_form_submitted", { 
       tipoPet: formData.tipoPet, 
-      destino: formData.paisDestino 
+      destino: destinoFinal 
     });
-    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5511999999999";
+    const whatsappNumber = "5511942452218";
     const totalPets = formData.qtdGatos + formData.qtdCachorros;
     const petDetailParts = [];
     if (formData.qtdCachorros > 0) petDetailParts.push(`${formData.qtdCachorros} cão(cães)`);
@@ -230,10 +237,11 @@ export default function Home() {
     const petDetails = petDetailParts.join(" e ");
     
     const emailText = formData.emailOpcional.trim() ? formData.emailOpcional : "Não informado";
-    const text = `Olá! Gostaria de iniciar meu CVI.\n\n*DADOS DA VIAGEM:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${formData.paisDestino}\n- Data Estimada: ${formData.dataViagem}\n\n*DADOS DO PET:*\n- Espécie/Quantidade: ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets total)" : "Não (Apenas 1 pet)"}\n\n*DADOS DO TUTOR:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}`;
+    const text = `Olá! Gostaria de iniciar meu CVI.\n\n*DADOS DA VIAGEM:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Data Estimada: ${formData.dataViagem}\n\n*DADOS DO PET:*\n- Espécie/Quantidade: ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets total)" : "Não (Apenas 1 pet)"}\n\n*DADOS DO TUTOR:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}`;
     const encodedText = encodeURIComponent(text);
     setTimeout(() => {
-      window.open(`https://wa.me/${whatsappNumber}?text=${encodedText}`, "_blank");
+      setSubmittedWhatsAppUrl(`https://wa.me/${whatsappNumber}?text=${encodedText}`);
+      setFormStep(3);
       setIsSubmitting(false);
     }, 800);
   };
@@ -378,7 +386,16 @@ export default function Home() {
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
   const [showQuantityCounters, setShowQuantityCounters] = useState(false);
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
+  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState("");
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
+
+  const clearFieldErrors = (...fields: (keyof FormErrors)[]) => {
+    setErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors };
+      fields.forEach((field) => delete nextErrors[field]);
+      return nextErrors;
+    });
+  };
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
@@ -449,6 +466,9 @@ export default function Home() {
     if (!formData.paisDestino) {
       newErrors.paisDestino = "Por favor, selecione o país de destino";
     }
+    if (formData.paisDestino === "Outro" && !formData.paisDestinoOutro.trim()) {
+      newErrors.paisDestinoOutro = "Por favor, informe qual país de destino";
+    }
     if (!formData.dataViagem) {
       newErrors.dataViagem = "Por favor, selecione quando pretende viajar";
     }
@@ -503,7 +523,7 @@ export default function Home() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       document.title = document.hidden 
-        ? "Seu pet está te esperando! 🐶" 
+        ? "Seu pet está te esperando" 
         : "CVI Fácil | Viagem Internacional de Cães e Gatos";
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -519,21 +539,27 @@ export default function Home() {
 
   useEffect(() => {
     const names = ["Mel", "Luna", "Theo", "Max", "Bento", "Amora", "Cacau", "Thor", "Frida", "Zeus"];
-    const dests = ["Portugal 🇵🇹", "Estados Unidos 🇺🇸", "Alemanha 🇩🇪", "Canadá 🇨🇦", "Itália 🇮🇹", "França 🇫🇷", "Irlanda 🇮🇪"];
+    const dests = ["Portugal", "Estados Unidos", "Alemanha", "Canadá", "Itália", "França", "Irlanda"];
+    let hideTimer: ReturnType<typeof setTimeout>;
+    let nextTimer: ReturnType<typeof setTimeout>;
     
     const showNotification = () => {
       const randomName = names[Math.floor(Math.random() * names.length)];
       const randomDest = dests[Math.floor(Math.random() * dests.length)];
       setNotification({ visible: true, name: randomName, dest: randomDest });
 
-      setTimeout(() => {
+      hideTimer = setTimeout(() => {
         setNotification((prev) => ({ ...prev, visible: false }));
-      }, 5000);
+        const nextDelay = 28000 + Math.floor(Math.random() * 18000);
+        nextTimer = setTimeout(showNotification, nextDelay);
+      }, 6500);
     };
 
-    const interval = setInterval(showNotification, 18000);
-    setTimeout(showNotification, 6000); // initial trigger
-    return () => clearInterval(interval);
+    nextTimer = setTimeout(showNotification, 12000);
+    return () => {
+      clearTimeout(hideTimer);
+      clearTimeout(nextTimer);
+    };
   }, []);
 
   const structuredData = {
@@ -864,7 +890,7 @@ export default function Home() {
                   { icon: <Headset className="w-5 h-5 text-white" />, title: "Suporte rápido", subtitle: "pelo WhatsApp" },
                   { icon: <Award className="w-5 h-5 text-white" />, title: "Especialistas em", subtitle: "documentação" }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex h-full min-h-[92px] flex-col items-center justify-start gap-2 rounded-xl bg-white/5 px-2.5 py-3 text-center sm:min-h-[88px] sm:flex-row sm:justify-start sm:text-left lg:min-h-0 lg:bg-transparent lg:px-2 lg:py-0">
+                  <div key={idx} className="micro-card flex h-full min-h-[92px] flex-col items-center justify-start gap-2 rounded-xl bg-white/5 px-2.5 py-3 text-center sm:min-h-[88px] sm:flex-row sm:justify-start sm:text-left lg:min-h-0 lg:px-2 lg:py-2">
                     <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/20 flex items-center justify-center bg-white/5">
                       {item.icon}
                     </div>
@@ -895,7 +921,7 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="relative w-full overflow-hidden flex flex-row">
+          <div className="marquee-pause-area relative w-full overflow-hidden flex flex-row">
             {/* Gradients on the edges for a fade-out shadow effect */}
             <div className="absolute top-0 left-0 bottom-0 w-16 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
             <div className="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
@@ -961,7 +987,7 @@ export default function Home() {
               ].map((card, idx) => (
                 <div 
                   key={idx} 
-                  className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col h-full transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/20 group cursor-default relative z-10"
+                  className="micro-card bg-white border border-gray-100 rounded-2xl p-6 flex flex-col h-full hover:border-primary/20 group cursor-default relative z-10"
                 >
                   <div className="mb-5 bg-blue-soft/50 w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
                     {card.icon}
@@ -1001,10 +1027,10 @@ export default function Home() {
               ].map((risk, idx) => (
                 <div 
                   key={idx} 
-                  className="bg-white border border-red-100/70 rounded-2xl p-6 lg:p-7 flex flex-col h-full transition-all duration-300 hover:-translate-y-1.5 hover:border-red-250 hover:shadow-lg group relative z-10 overflow-hidden"
+                  className="micro-card bg-white border border-red-100/70 rounded-2xl px-6 pb-6 pt-0 lg:px-7 lg:pb-7 flex flex-col h-full hover:border-red-200 group relative z-10 overflow-hidden"
                 >
                   {/* Full-bleed Cover Image for consequence card */}
-                  <div className="w-full h-[160px] rounded-xl mb-5 overflow-hidden shadow-sm relative">
+                  <div className="-mx-6 lg:-mx-7 w-[calc(100%+3rem)] lg:w-[calc(100%+3.5rem)] h-[170px] mb-5 overflow-hidden shadow-sm relative">
                     <img 
                       src={riskImages[idx]} 
                       alt={risk.title} 
@@ -1016,7 +1042,7 @@ export default function Home() {
                     <div className="bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
                       {risk.icon}
                     </div>
-                    <h3 className="text-[17px] font-extrabold text-navy transition-colors duration-300 group-hover:text-red-650 leading-snug">
+                    <h3 className="text-[17px] font-extrabold text-navy transition-colors duration-300 group-hover:text-red-600 leading-snug">
                       {risk.title}
                     </h3>
                   </div>
@@ -1031,7 +1057,7 @@ export default function Home() {
               <a 
                 href="#avaliacao" 
                 onClick={(e) => handleSmoothScroll(e, "avaliacao")}
-                className="w-full sm:w-auto inline-flex items-center justify-center font-[800] rounded-xl transition-all duration-300 hover:-translate-y-0.5 bg-red-600 hover:bg-red-700 text-white h-12 px-8 text-[15px]  border-none"
+                className="w-full sm:w-auto inline-flex items-center justify-center font-[800] rounded-xl transition-all duration-300 hover:-translate-y-0.5 bg-whatsapp hover:bg-whatsapp-hover text-white h-12 px-8 text-[15px] border-none"
               >
                 Evitar riscos e faça seu CVI do jeito certo
               </a>
@@ -1080,7 +1106,7 @@ export default function Home() {
                 ].map((item, idx) => (
                   <li 
                     key={idx} 
-                    className="flex items-start gap-3 bg-white p-4 rounded-xl border border-gray-100/60 transition-all duration-300 lg:hover:translate-x-1"
+                    className="micro-card flex items-start gap-3 bg-white p-4 rounded-xl border border-gray-100/60"
                   >
                     <CheckCircle2 className="w-5 h-5 text-whatsapp flex-shrink-0 mt-0.5" />
                     <span className="text-[15px] sm:text-[14.5px] font-bold text-navy leading-snug">
@@ -1131,7 +1157,7 @@ export default function Home() {
                   : "bg-red-50 border-red-100 "
               }`}>
                 <h3 className={`text-[17px] font-extrabold mb-4 flex items-center gap-2 ${
-                  compActiveTab === "cvi" ? "text-primary-dark" : "text-red-750"
+                  compActiveTab === "cvi" ? "text-primary-dark" : "text-red-700"
                 }`}>
                   {compActiveTab === "cvi" ? (
                     <><CheckCircle2 className="w-5 h-5 text-whatsapp" /> Com a CVI Fácil</>
@@ -1163,7 +1189,7 @@ export default function Home() {
                 <div className="flex-[1.2] p-6 flex items-center text-[15px] md:text-[16px] font-extrabold tracking-wider uppercase opacity-90">
                   O QUE VOCÊ PRECISA
                 </div>
-                <div className="flex-1 p-6 border-l border-white/10 bg-red-700 flex items-center justify-center text-center">
+                <div className="flex-1 p-6 border-l border-white/10 bg-red-500 flex items-center justify-center text-center">
                   <span className="text-[17px] font-bold flex items-center gap-1.5 justify-center text-white">
                     <XCircle className="w-5 h-5 text-red-100" /> Fazer sozinho
                   </span>
@@ -1240,12 +1266,12 @@ export default function Home() {
                     {/* Circle Indicator */}
                     <div className={`relative shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center z-15 transition-all duration-300 ${
                       isLast 
-                        ? "border-emerald-100 bg-emerald-50 text-whatsapp animate-soft-green-pulse group-hover:border-whatsapp group-hover:bg-whatsapp group-hover:text-white group-hover:shadow-[0_0_18px_rgba(37,211,102,0.32)]" 
+                        ? "border-emerald-200 bg-emerald-100 text-emerald-700 animate-soft-green-pulse group-hover:border-emerald-700 group-hover:bg-emerald-700 group-hover:text-white group-hover:shadow-[0_0_18px_rgba(5,150,105,0.32)]" 
                         : "border-gray-200 bg-white text-gray-400 group-hover:border-primary group-hover:bg-primary group-hover:text-white group-hover:shadow-[0_0_15px_rgba(17,130,186,0.22)]"
                     }`}>
                       {step.icon(isLast)}
                       <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white font-extrabold text-[10px] flex items-center justify-center transition-all duration-300 bg-gray-300 ${
-                        isLast ? "group-hover:bg-whatsapp" : "group-hover:bg-primary"
+                        isLast ? "bg-emerald-700 group-hover:bg-white group-hover:text-emerald-700" : "group-hover:bg-white group-hover:text-primary"
                       }`}>
                         {idx + 1}
                       </div>
@@ -1299,7 +1325,7 @@ export default function Home() {
                 { icon: <ShieldCheck className="w-5 h-5 text-white" />, title: "Seguro", desc: "Seus dados estão protegidos." },
                 { icon: <HeartHandshake className="w-5 h-5 text-white" />, title: "Sem compromisso", desc: "Você recebe uma análise sem custo." }
               ].map((item, idx) => (
-                <div key={idx} className="flex items-start gap-4 bg-white/10 backdrop-blur-[2px] p-4 rounded-2xl border border-white/20">
+                <div key={idx} className="micro-card flex items-start gap-4 bg-white/10 backdrop-blur-[2px] p-4 rounded-2xl border border-white/20">
                   <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
                     {item.icon}
                   </div>
@@ -1317,9 +1343,9 @@ export default function Home() {
                 
 
 
-                {/* 1 Passo 1 ━━━━━━━━━ 2 Passo 2 */}
+                {/* 1 Passo 1 ━━━━━━━━━ 2 Passo 2 ━━━━━━━━━ 3 Confirmação */}
                 <div className="flex items-center justify-between pb-5 select-none">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
                       formStep === 1 
                         ? "bg-primary text-white" 
@@ -1338,18 +1364,39 @@ export default function Home() {
                     formStep > 1 ? "bg-primary" : "bg-gray-100"
                   }`} />
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
                       formStep === 2 
                         ? "bg-primary text-white" 
-                        : "bg-gray-100 text-gray-400"
+                        : formStep > 2
+                          ? "bg-whatsapp text-white"
+                          : "bg-gray-100 text-gray-400"
                     }`}>
-                      2
+                      {formStep > 2 ? "✓" : "2"}
                     </div>
                     <span className={`text-[13px] font-bold ${
                       formStep === 2 ? "text-navy font-black" : "text-gray-400"
                     }`}>
                       Passo 2
+                    </span>
+                  </div>
+
+                  <div className={`flex-1 h-[2px] mx-4 transition-colors ${
+                    formStep > 2 ? "bg-primary" : "bg-gray-100"
+                  }`} />
+
+                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
+                      formStep === 3
+                        ? "bg-whatsapp text-white"
+                        : "bg-gray-100 text-gray-400"
+                    }`}>
+                      3
+                    </div>
+                    <span className={`text-[13px] font-bold ${
+                      formStep === 3 ? "text-navy font-black" : "text-gray-400"
+                    }`}>
+                      Enviado
                     </span>
                   </div>
                 </div>
@@ -1362,7 +1409,7 @@ export default function Home() {
                     <div className="flex flex-col gap-4 animate-fade-in">
 
                       {/* 1. Tipo de pet & Quantidade (Symmetrical edge-to-edge layout, always side-by-side) */}
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-2.5">
                         <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Tipo de pet</label>
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
                           
@@ -1382,6 +1429,7 @@ export default function Home() {
                                   onClick={() => {
                                     const nextQty = Math.max(0, formData.qtdGatos - 1);
                                     setFormData({ ...formData, qtdGatos: nextQty });
+                                    if (nextQty + formData.qtdCachorros > 0) clearFieldErrors("tipoPet");
                                     trackEvent("cvi_quantity_gato_changed", { qty: nextQty });
                                   }}
                                   className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-primary/10 hover:bg-primary hover:text-white text-primary flex items-center justify-center font-black text-[18px] transition-all cursor-pointer shadow-sm z-10 shrink-0"
@@ -1404,6 +1452,7 @@ export default function Home() {
                                   onClick={() => {
                                     const nextQty = formData.qtdGatos + 1;
                                     setFormData({ ...formData, qtdGatos: nextQty });
+                                    clearFieldErrors("tipoPet");
                                     trackEvent("cvi_quantity_gato_changed", { qty: nextQty });
                                   }}
                                   className="ml-auto w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-primary/10 hover:bg-primary hover:text-white text-primary flex items-center justify-center font-black text-[18px] transition-all cursor-pointer shadow-sm z-10 shrink-0"
@@ -1417,6 +1466,7 @@ export default function Home() {
                                 className="relative flex items-center justify-center w-full h-full cursor-pointer select-none"
                                 onClick={() => {
                                   setFormData({ ...formData, qtdGatos: 1, qtdCachorros: 0, tipoPet: "Gato" });
+                                  clearFieldErrors("tipoPet");
                                   trackEvent("cvi_pet_type_selected", { type: "Gato" });
                                 }}
                               >
@@ -1447,6 +1497,7 @@ export default function Home() {
                                   onClick={() => {
                                     const nextQty = Math.max(0, formData.qtdCachorros - 1);
                                     setFormData({ ...formData, qtdCachorros: nextQty });
+                                    if (formData.qtdGatos + nextQty > 0) clearFieldErrors("tipoPet");
                                     trackEvent("cvi_quantity_cao_changed", { qty: nextQty });
                                   }}
                                   className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-primary/10 hover:bg-primary hover:text-white text-primary flex items-center justify-center font-black text-[18px] transition-all cursor-pointer shadow-sm z-10 shrink-0"
@@ -1469,6 +1520,7 @@ export default function Home() {
                                   onClick={() => {
                                     const nextQty = formData.qtdCachorros + 1;
                                     setFormData({ ...formData, qtdCachorros: nextQty });
+                                    clearFieldErrors("tipoPet");
                                     trackEvent("cvi_quantity_cao_changed", { qty: nextQty });
                                   }}
                                   className="ml-auto w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-primary/10 hover:bg-primary hover:text-white text-primary flex items-center justify-center font-black text-[18px] transition-all cursor-pointer shadow-sm z-10 shrink-0"
@@ -1482,6 +1534,7 @@ export default function Home() {
                                 className="relative flex items-center justify-center w-full h-full cursor-pointer select-none"
                                 onClick={() => {
                                   setFormData({ ...formData, qtdCachorros: 1, qtdGatos: 0, tipoPet: "Cão" });
+                                  clearFieldErrors("tipoPet");
                                   trackEvent("cvi_pet_type_selected", { type: "Cão" });
                                 }}
                               >
@@ -1499,7 +1552,7 @@ export default function Home() {
                         </div>
                         
                         {/* Dynamic Multi-Pet text trigger link (Aligned Right, Italic, No Underline) */}
-                        <div className="flex items-center justify-end w-full mt-1 select-none">
+                        <div className="flex items-center justify-end w-full select-none">
                           {!showQuantityCounters ? (
                             <button 
                               type="button"
@@ -1507,7 +1560,7 @@ export default function Home() {
                                 setShowQuantityCounters(true);
                                 trackEvent("cvi_show_quantity_counters_clicked");
                               }}
-                              className="min-h-10 px-2 text-[13px] font-extrabold text-primary hover:text-primary-dark italic cursor-pointer transition-colors"
+                              className="min-h-8 px-1 text-[13px] font-extrabold text-primary hover:text-primary-dark italic cursor-pointer transition-colors"
                             >
                               Vai viajar com mais de um pet?
                             </button>
@@ -1525,7 +1578,7 @@ export default function Home() {
                                 });
                                 trackEvent("cvi_hide_quantity_counters_clicked");
                               }}
-                              className="min-h-10 px-2 text-[13px] font-extrabold text-text-muted hover:text-navy italic cursor-pointer transition-colors"
+                              className="min-h-8 px-1 text-[13px] font-extrabold text-text-muted hover:text-navy italic cursor-pointer transition-colors"
                             >
                               Voltar para apenas 1 pet
                             </button>
@@ -1533,8 +1586,8 @@ export default function Home() {
                         </div>
 
                         {showQuantityCounters && (formData.qtdGatos + formData.qtdCachorros) > 1 && (
-                          <div className="bg-emerald-50/40 text-emerald-700 text-[11px] font-bold p-2.5 rounded-lg border border-emerald-100/20 mt-1 select-none animate-fade-in">
-                            ★ Desconto de múltiplos pets aplicado automaticamente!
+                          <div className="bg-emerald-50/40 text-emerald-700 text-[11px] font-bold p-2.5 rounded-lg border border-emerald-100/20 select-none animate-fade-in">
+                            Desconto de múltiplos pets aplicado automaticamente.
                           </div>
                         )}
                         {errors.tipoPet && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.tipoPet}</span>}
@@ -1550,7 +1603,10 @@ export default function Home() {
                             placeholder="De qual cidade você vai partir?"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.cidadeOrigem ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.cidadeOrigem}
-                            onChange={(e) => setFormData({ ...formData, cidadeOrigem: e.target.value })}
+                            onChange={(e) => {
+                              setFormData({ ...formData, cidadeOrigem: e.target.value });
+                              if (e.target.value.trim()) clearFieldErrors("cidadeOrigem");
+                            }}
                           />
                         </div>
                         {errors.cidadeOrigem && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.cidadeOrigem}</span>}
@@ -1622,7 +1678,12 @@ export default function Home() {
                                     onClick={() => {
                                       const restErrors = { ...errors };
                                       delete restErrors.paisDestino;
-                                      setFormData({ ...formData, paisDestino: option.value });
+                                      delete restErrors.paisDestinoOutro;
+                                      setFormData({
+                                        ...formData,
+                                        paisDestino: option.value,
+                                        paisDestinoOutro: option.value === "Outro" ? formData.paisDestinoOutro : ""
+                                      });
                                       setErrors(restErrors);
                                       setIsDestinationOpen(false);
                                       trackEvent("cvi_destination_selected", { destination: option.value });
@@ -1633,7 +1694,10 @@ export default function Home() {
                                         : "text-navy hover:bg-blue-soft"
                                     }`}
                                   >
-                                    <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold">{option.label}</span>
+                                    <span className="flex min-w-0 flex-1 items-center gap-3">
+                                      <span className="text-[18px] leading-none">{option.flag}</span>
+                                      <span className="truncate text-[15px] font-extrabold">{option.label}</span>
+                                    </span>
                                     {isSelected && <Check className="h-4.5 w-4.5 shrink-0 text-white" />}
                                   </button>
                                 );
@@ -1644,15 +1708,35 @@ export default function Home() {
                         {errors.paisDestino && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.paisDestino}</span>}
                       </div>
 
+                      {formData.paisDestino === "Outro" && (
+                        <div className="flex flex-col gap-1.5 animate-fade-in">
+                          <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Qual país?</label>
+                          <div className="relative flex items-center">
+                            <Globe2 className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
+                            <input
+                              type="text"
+                              placeholder="Digite o país de destino"
+                              className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.paisDestinoOutro ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
+                              value={formData.paisDestinoOutro}
+                              onChange={(e) => {
+                                setFormData({ ...formData, paisDestinoOutro: e.target.value });
+                                if (e.target.value.trim()) clearFieldErrors("paisDestinoOutro");
+                              }}
+                            />
+                          </div>
+                          {errors.paisDestinoOutro && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.paisDestinoOutro}</span>}
+                        </div>
+                      )}
+
                       {/* 4. Previsão da viagem */}
                       <div className="flex flex-col gap-2">
                         <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Previsão da viagem</label>
                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:flex lg:flex-row lg:flex-nowrap gap-2 w-full select-none">
                           {[
-                            "Menos de 1 mês",
-                            "1 a 3 meses",
-                            "3 a 6 meses",
-                            "6 meses a 1 ano",
+                            "De menos de 1 mês",
+                            "De 1 a 3 meses",
+                            "De 3 a 6 meses",
+                            "De 6 meses a 1 ano",
                             "Ainda não sei"
                           ].map((timeframe, idx) => {
                             const isSelected = formData.dataViagem === timeframe;
@@ -1663,6 +1747,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => {
                                   setFormData({ ...formData, dataViagem: timeframe });
+                                  clearFieldErrors("dataViagem");
                                   trackEvent("cvi_timeframe_selected", { timeframe });
                                 }}
                                 className={`flex items-center justify-center text-center min-h-[48px] sm:min-h-[52px] px-2.5 sm:px-3 rounded-xl border-2 font-bold text-[12px] sm:text-[13.5px] lg:text-[11.5px] leading-tight transition-all duration-200 cursor-pointer flex-1 flex-grow shrink-0 ${
@@ -1670,7 +1755,7 @@ export default function Home() {
                                 } ${
                                   isSelected 
                                     ? 'border-primary bg-primary text-white shadow-[0_2px_8px_rgba(17,130,186,0.12)]' 
-                                    : 'border-gray-200 text-navy hover:border-primary/40 bg-white hover:bg-blue-soft/50 hover:text-primary-dark'
+                                    : 'border-gray-200 text-text-muted hover:border-primary/40 bg-white hover:bg-blue-soft/50 hover:text-text-muted'
                                 }`}
                               >
                                 {timeframe}
@@ -1684,7 +1769,7 @@ export default function Home() {
                       <button 
                         type="button" 
                         onClick={() => {
-                          if (validateStep1()) {
+                          if (validateStep1() && validateStep2()) {
                             setFormStep(2);
                             trackEvent("cvi_step_2_started");
                             if (window.innerWidth < 1024) {
@@ -1717,7 +1802,10 @@ export default function Home() {
                             autoComplete="name"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.nomeTutor ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.nomeTutor}
-                            onChange={(e) => setFormData({ ...formData, nomeTutor: e.target.value })}
+                            onChange={(e) => {
+                              setFormData({ ...formData, nomeTutor: e.target.value });
+                              if (e.target.value.trim()) clearFieldErrors("nomeTutor");
+                            }}
                           />
                         </div>
                         {errors.nomeTutor && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.nomeTutor}</span>}
@@ -1730,10 +1818,14 @@ export default function Home() {
                           <Phone className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
                             type="text"
-                            placeholder="Ex: (11) 99999-9999"
+                            placeholder="Ex: (11) 94245-2218"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOuTelefone}
-                            onChange={(e) => setFormData({ ...formData, emailOuTelefone: e.target.value })}
+                            onChange={(e) => {
+                              setFormData({ ...formData, emailOuTelefone: e.target.value });
+                              const phoneDigits = e.target.value.replace(/\D/g, "");
+                              if (phoneDigits.length >= 10 && !e.target.value.includes("@")) clearFieldErrors("emailOuTelefone");
+                            }}
                           />
                         </div>
                         {errors.emailOuTelefone && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.emailOuTelefone}</span>}
@@ -1749,7 +1841,10 @@ export default function Home() {
                             placeholder="Digite seu e-mail (caso queira)"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOpcional ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOpcional}
-                            onChange={(e) => setFormData({ ...formData, emailOpcional: e.target.value })}
+                            onChange={(e) => {
+                              setFormData({ ...formData, emailOpcional: e.target.value });
+                              if (!e.target.value.trim() || /^\S+@\S+\.\S+$/.test(e.target.value.trim())) clearFieldErrors("emailOpcional");
+                            }}
                           />
                         </div>
                         {errors.emailOpcional && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.emailOpcional}</span>}
@@ -1777,7 +1872,7 @@ export default function Home() {
                             <span>Enviando...</span>
                           ) : (
                             <>
-                              <span>Iniciar meu CVI</span>
+                              <span>Enviar informações</span>
                               <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                             </>
                           )}
@@ -1786,9 +1881,54 @@ export default function Home() {
                     </div>
                   )}
 
+                  {/* STEP 3: CONFIRMATION AND WHATSAPP HANDOFF */}
+                  {formStep === 3 && (
+                    <div className="flex flex-col gap-5 animate-fade-in text-center">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-whatsapp shadow-[0_8px_20px_rgba(5,184,92,0.12)]">
+                        <CheckCircle2 className="h-8 w-8" />
+                      </div>
+
+                      <div>
+                        <h3 className="text-[22px] font-black leading-tight text-navy">
+                          Formulário enviado com sucesso
+                        </h3>
+                        <p className="mt-2 text-[14.5px] font-semibold leading-relaxed text-text-muted">
+                          Recebemos suas informações. Nossa equipe vai analisar os dados da viagem e entrar em contato para orientar os próximos passos.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-gray-100 bg-blue-soft/35 p-4 text-left">
+                        <div className="grid gap-3 text-[13px] font-bold text-navy sm:grid-cols-2">
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Origem</strong>{formData.cidadeOrigem}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Destino</strong>{formData.paisDestino === "Outro" ? formData.paisDestinoOutro : formData.paisDestino}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Viagem</strong>{formData.dataViagem}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Tutor</strong>{formData.nomeTutor}</span>
+                        </div>
+                      </div>
+
+                      <a
+                        href={submittedWhatsAppUrl || "https://wa.me/5511942452218"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex min-h-[62px] w-full items-center justify-center gap-2 rounded-xl bg-whatsapp text-[15px] font-black uppercase tracking-wide text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-whatsapp-hover active:scale-[0.98]"
+                      >
+                        <span>Iniciar atendimento</span>
+                        <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => setFormStep(1)}
+                        className="mx-auto text-[13px] font-extrabold text-text-muted transition-colors hover:text-navy"
+                      >
+                        Editar informações
+                      </button>
+                    </div>
+                  )}
+
                   {/* Footer microtext */}
-                  <div className="h-px bg-gray-100 my-2" />
-                  <div className="flex items-center justify-center gap-2.5 text-left select-none py-1">
+                  <div className="h-px bg-gray-100 my-1" />
+                  <div className="flex items-center justify-center gap-2.5 text-left select-none py-0.5">
                     <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                       <Lock className="w-3.5 h-3.5" />
                     </div>
@@ -1797,9 +1937,9 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <p className="text-center text-[10.5px] text-text-muted/80 leading-none mt-1">
+                  <p className="text-center text-[10.5px] text-text-muted/80 leading-none">
                     Ao continuar, você concorda com nossa{" "}
-                    <a href="#" onClick={(e) => e.preventDefault()} className="underline hover:text-primary transition-colors font-bold">
+                    <a href="/politica-de-privacidade" className="underline hover:text-primary transition-colors font-bold">
                       Política de Privacidade
                     </a>.
                   </p>
@@ -1835,7 +1975,7 @@ export default function Home() {
                 ].map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100  transition-all duration-300 hover:bg-blue-soft/20"
+                    className="micro-card flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:bg-blue-soft/20"
                   >
                     <CheckCircle2 className="w-5 h-5 text-whatsapp flex-shrink-0" />
                     <span className="text-[14px] sm:text-[14.5px] font-bold text-navy leading-tight">
@@ -1935,7 +2075,7 @@ export default function Home() {
             ========================================== */}
         <section className="bg-white py-12 md:py-16">
           <div className="container-custom mx-auto">
-            <div className="max-w-4xl mx-auto bg-[#eef8fc] rounded-3xl p-6 sm:p-10 lg:p-12 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 text-center md:text-left shadow-[0_8px_30px_rgba(17,130,186,0.04)]">
+            <div className="micro-card max-w-4xl mx-auto bg-[#eef8fc] rounded-3xl p-6 sm:p-10 lg:p-12 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 text-center md:text-left shadow-[0_8px_30px_rgba(17,130,186,0.04)]">
               <div className="shrink-0">
                 <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white flex items-center justify-center border border-gray-200 shadow-[0_4px_12px_rgba(6,42,87,0.02)]">
                   <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 text-primary" />
@@ -2063,10 +2203,6 @@ export default function Home() {
               <p className="text-[14px] text-text-main leading-[1.6] mb-6">
                 Orientação e acompanhamento para organizar o CVI do seu pet sem complicação.
               </p>
-              <p className="text-[13px] text-text-muted mt-auto font-sans">
-                &copy; {currentYear} CVI Fácil. Todos os direitos reservados.
-                <span className="block text-[10px] text-text-muted/30 mt-1 select-all">CNPJ: 29.922.919/0001-14</span>
-              </p>
             </div>
 
             {/* Col 2: Service details */}
@@ -2075,8 +2211,18 @@ export default function Home() {
                 Atendimento
               </h4>
               <ul className="flex flex-col gap-3 text-[14px] text-text-main">
-                <li><strong>WhatsApp:</strong> (11) 99999-9999</li>
-                <li><strong>E-mail:</strong> contato@cvifacil.com.br</li>
+                <li>
+                  <strong>WhatsApp:</strong>{" "}
+                  <a href="https://wa.me/5511942452218" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    (11) 94245-2218
+                  </a>
+                </li>
+                <li>
+                  <strong>E-mail:</strong>{" "}
+                  <a href="mailto:contato@cvifacil.com.br" className="hover:text-primary transition-colors">
+                    contato@cvifacil.com.br
+                  </a>
+                </li>
                 <li><strong>Horário:</strong> Seg a Sex, 09h às 18h</li>
               </ul>
             </div>
@@ -2087,9 +2233,10 @@ export default function Home() {
                 Institucional
               </h4>
               <ul className="flex flex-col gap-3 text-[14px] text-text-main">
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="hover:text-primary transition-colors">Quem somos</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="hover:text-primary transition-colors">Política de Privacidade</a></li>
-                <li><a href="#" onClick={(e) => e.preventDefault()} className="hover:text-primary transition-colors">Termos de Uso</a></li>
+                <li><a href="#home" className="hover:text-primary transition-colors">Quem somos</a></li>
+                <li><a href="/politica-de-privacidade" className="hover:text-primary transition-colors">Política de Privacidade</a></li>
+                <li><a href="/termos-de-uso" className="hover:text-primary transition-colors">Termos de Uso</a></li>
+                <li><a href="/design-system" className="hover:text-primary transition-colors">Design System</a></li>
               </ul>
             </div>
 
@@ -2105,9 +2252,12 @@ export default function Home() {
 
           </div>
 
-          <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
             <span className="text-[12px] text-text-muted">
-              Desenvolvido com ❤️ para tutores e seus pets.
+              &copy; {currentYear} CVI Fácil. Todos os direitos reservados.
+            </span>
+            <span className="text-[12px] text-text-muted select-all">
+              CNPJ: 29.922.919/0001-14
             </span>
           </div>
         </div>
@@ -2116,18 +2266,6 @@ export default function Home() {
       {/* ==========================================
           FLOATING ELEMENTS & CRO WIDGETS
           ========================================== */}
-      {/* Floating WhatsApp Bubble */}
-      <div className="fixed bottom-6 right-6 z-40 hidden md:block">
-        <a 
-          href="#avaliacao"
-          onClick={(e) => handleSmoothScroll(e, "avaliacao")}
-          className="group flex items-center justify-center w-14 h-14 rounded-full bg-whatsapp text-white hover:bg-whatsapp-hover transition-all duration-300 hover:scale-105 active:scale-95"
-          aria-label="Ir para avaliação"
-        >
-          <ArrowRight className="w-7 h-7 transition-transform duration-300 group-hover:translate-x-0.5" />
-        </a>
-      </div>
-
       {/* Mobile Sticky Bar */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-white/95 backdrop-blur-md border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.05)] pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 ${
         scrolled ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
@@ -2145,28 +2283,24 @@ export default function Home() {
 
 
 
-      {/* Floating Notification Popup (iOS Style Push Notification) */}
+      {/* Floating Notification Popup */}
       <div 
-        className={`hidden md:block fixed bottom-24 left-6 z-40 transition-all duration-500 max-w-[310px] pointer-events-none ${
+        className={`fixed bottom-24 left-3 right-3 z-40 mx-auto max-w-[292px] transition-all duration-500 pointer-events-none md:left-6 md:right-auto md:mx-0 md:max-w-[310px] ${
           notification.visible 
             ? "translate-y-0 opacity-100 scale-100" 
             : "translate-y-8 opacity-0 scale-95"
         }`}
       >
-        <div className="pointer-events-auto flex w-[292px] items-center gap-3 rounded-2xl border border-gray-200/70 bg-white/90 p-3 font-sans shadow-[0_10px_28px_rgba(6,42,87,0.07)] backdrop-blur-md">
-          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-blue-soft">
-              <img
-                src="/assets/social-proof-04.png"
-                alt="Tutora da CVI Fácil"
-                className="h-full w-full object-cover"
-              />
+        <div className="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border border-emerald-100/80 bg-white/92 p-3 font-sans shadow-[0_10px_28px_rgba(6,42,87,0.08)] backdrop-blur-md">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-whatsapp/10 text-whatsapp">
+            <CheckCircle2 className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-0.5 flex items-center justify-between gap-3">
               <span className="text-[11px] font-[850] leading-none tracking-[-0.01em] text-whatsapp">CVI Fácil</span>
               <span className="shrink-0 text-[10px] font-semibold leading-none text-text-muted/55">agora</span>
             </div>
-            <p className="text-[12.5px] font-medium leading-snug tracking-[-0.01em] text-navy/85">
+            <p className="text-[12px] font-semibold leading-snug tracking-[-0.01em] text-navy/85 md:text-[12.5px]">
               CVI de <strong className="font-[850] text-navy">{notification.name}</strong> emitido para {notification.dest}
             </p>
           </div>

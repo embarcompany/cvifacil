@@ -53,7 +53,7 @@ export function FormSection() {
     setIsSubmitting(true);
 
     // Format WhatsApp message with parameters
-    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5511999999999";
+    const whatsappNumber = "5511942452218";
     const text = `Olá! Gostaria de receber a análise gratuita do meu CVI.\n\n*Dados do Pet:*\n- Espécie: ${formData.tipoPet}\n- Idade: ${formData.idadePet}\n- Destino: ${formData.paisDestino}\n- Data da Viagem: ${formData.dataViagem}\n\n*Dados do Tutor:*\n- Nome: ${formData.nomeTutor}\n- Contato: ${formData.emailOuTelefone}`;
     const encodedText = encodeURIComponent(text);
     

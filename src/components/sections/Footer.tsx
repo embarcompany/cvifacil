@@ -5,7 +5,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
   
   // Variables mapped from prompt placeholders
-  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || "(11) 99999-9999";
+  const whatsapp = "(11) 94245-2218";
   const email = process.env.NEXT_PUBLIC_EMAIL || "contato@cvifacil.com.br";
   const cidade = process.env.NEXT_PUBLIC_CIDADE || "São Paulo";
   const uf = process.env.NEXT_PUBLIC_UF || "SP";

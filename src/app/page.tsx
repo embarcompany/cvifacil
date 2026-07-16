@@ -694,6 +694,16 @@ export default function Home() {
     };
   }, []);
 
+  const totalSelectedPets = formData.qtdGatos + formData.qtdCachorros;
+  const confirmationPetParts = [];
+  if (formData.qtdCachorros > 0) {
+    confirmationPetParts.push(`${formData.qtdCachorros} ${formData.qtdCachorros === 1 ? "cachorro" : "cachorros"}`);
+  }
+  if (formData.qtdGatos > 0) {
+    confirmationPetParts.push(`${formData.qtdGatos} ${formData.qtdGatos === 1 ? "gato" : "gatos"}`);
+  }
+  const confirmationPetSummary = confirmationPetParts.join(" e ") || "Não informado";
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -2007,7 +2017,7 @@ export default function Home() {
                           Formulário enviado com sucesso
                         </h3>
                         <p className="mt-2 text-[14.5px] font-semibold leading-relaxed text-text-muted">
-                          Recebemos suas informações. Nossa equipe vai analisar os dados da viagem e entrar em contato para orientar os próximos passos.
+                          Recebemos suas informações e nossa equipe vai analisar os dados da viagem. Se quiser antecipar o atendimento, clique no botão abaixo para chamar a gente agora no WhatsApp.
                         </p>
                       </div>
 
@@ -2017,6 +2027,9 @@ export default function Home() {
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Destino</strong>{formData.paisDestino === "Outro" ? formData.paisDestinoOutro : formData.paisDestino}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Viagem</strong>{formData.dataViagem}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Tutor</strong>{formData.nomeTutor}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">WhatsApp</strong>{formData.emailOuTelefone}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Pet</strong>{confirmationPetSummary}</span>
+                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Quantidade</strong>{totalSelectedPets || "Não informado"}</span>
                         </div>
                       </div>
 

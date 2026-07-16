@@ -93,6 +93,54 @@ type PersistedFormState = {
   submittedWhatsAppUrl?: string;
 };
 
+type LeadDatabasePayload = {
+  submitted_at: string;
+  nome_tutor: string;
+  whatsapp: string;
+  email_opcional: string | null;
+  cidade_origem: string;
+  pais_destino: string;
+  pais_destino_outro: string | null;
+  destino_final: string;
+  data_viagem: string;
+  qtd_gatos: number;
+  qtd_cachorros: number;
+  total_pets: number;
+  pet_summary: string;
+  mais_de_um_pet: boolean;
+  tipo_pet: string;
+  page_url: string | null;
+  user_agent: string | null;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  gclid?: string;
+  fbclid?: string;
+};
+
+function getUrlTrackingParams() {
+  if (typeof window === "undefined") return {};
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const trackingKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "gclid",
+    "fbclid",
+  ];
+
+  return trackingKeys.reduce<Record<string, string>>((trackingParams, key) => {
+    const value = searchParams.get(key);
+    if (value) trackingParams[key] = value;
+    return trackingParams;
+  }, {});
+}
+
 function readPersistedFormState(): PersistedFormState | null {
   if (typeof document === "undefined") return null;
 
@@ -350,24 +398,78 @@ export default function Home() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const saveLeadToDatabase = async (leadPayload: LeadDatabasePayload) => {
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(leadPayload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Lead database save failed with status ${response.status}`);
+    }
+
+    return response.json() as Promise<{ ok?: boolean; skipped?: boolean; reason?: string }>;
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep3()) return;
     setIsSubmitting(true);
     const destinoFinal = formData.paisDestino === "Outro"
       ? formData.paisDestinoOutro.trim()
       : formData.paisDestino;
-    trackEvent("cvi_form_submitted", { 
-      ...getFormAnalyticsContext(3),
-      tipoPet: formData.tipoPet, 
-      destino: destinoFinal 
-    });
     const whatsappNumber = "5511942452218";
     const totalPets = formData.qtdGatos + formData.qtdCachorros;
     const petDetailParts = [];
     if (formData.qtdCachorros > 0) petDetailParts.push(`${formData.qtdCachorros} cão(cães)`);
     if (formData.qtdGatos > 0) petDetailParts.push(`${formData.qtdGatos} gato(s)`);
     const petDetails = petDetailParts.join(" e ");
+    const analyticsContext = getFormAnalyticsContext(3);
+    const leadPayload: LeadDatabasePayload = {
+      submitted_at: new Date().toISOString(),
+      nome_tutor: formData.nomeTutor.trim(),
+      whatsapp: formData.emailOuTelefone.trim(),
+      email_opcional: formData.emailOpcional.trim() || null,
+      cidade_origem: formData.cidadeOrigem.trim(),
+      pais_destino: formData.paisDestino,
+      pais_destino_outro: formData.paisDestino === "Outro" ? formData.paisDestinoOutro.trim() || null : null,
+      destino_final: destinoFinal,
+      data_viagem: formData.dataViagem,
+      qtd_gatos: formData.qtdGatos,
+      qtd_cachorros: formData.qtdCachorros,
+      total_pets: totalPets,
+      pet_summary: petDetails,
+      mais_de_um_pet: totalPets > 1,
+      tipo_pet: formData.tipoPet || petDetails,
+      page_url: typeof window !== "undefined" ? window.location.href : null,
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      ...getUrlTrackingParams(),
+    };
+
+    trackEvent("cvi_form_submitted", { 
+      ...analyticsContext,
+      tipoPet: formData.tipoPet, 
+      destino: destinoFinal 
+    });
+
+    try {
+      const databaseResult = await saveLeadToDatabase(leadPayload);
+      trackEvent("cvi_lead_database_saved", {
+        ...analyticsContext,
+        database_saved: databaseResult.ok === true,
+        database_skipped: databaseResult.skipped === true,
+        database_skip_reason: databaseResult.reason,
+      });
+    } catch (error) {
+      console.error("[cvi-leads] Could not save lead", error);
+      trackEvent("cvi_lead_database_error", {
+        ...analyticsContext,
+        database_saved: false,
+      });
+    }
     
     const emailText = formData.emailOpcional.trim() ? formData.emailOpcional : "Não informado";
     const text = `Olá! Gostaria de iniciar meu CVI.\n\n*DADOS DA VIAGEM:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Data Estimada: ${formData.dataViagem}\n\n*DADOS DO PET:*\n- Espécie/Quantidade: ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets total)" : "Não (Apenas 1 pet)"}\n\n*DADOS DO TUTOR:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}`;

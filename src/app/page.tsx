@@ -69,6 +69,8 @@ interface FormErrors {
   quantidadePets?: string;
 }
 
+type AnalyticsParams = Record<string, string | number | boolean | string[] | null | undefined>;
+
 const formCookieName = "cvi_facil_form_state";
 const defaultFormData: FormData = {
   nomeTutor: "",
@@ -309,19 +311,31 @@ export default function Home() {
   const [hasStartedForm, setHasStartedForm] = useState(false);
 
   // Track event analytics helper
-  const trackEvent = (eventName: string, params: object = {}) => {
+  const trackEvent = (eventName: string, params: AnalyticsParams = {}) => {
     console.log("[Analytics Event] " + eventName, params);
     const analyticsWindow = window as Window & {
-      gtag?: (type: "event", name: string, params: object) => void;
+      dataLayer?: AnalyticsParams[];
+      gtag?: (type: "event", name: string, params: AnalyticsParams) => void;
     };
-    if (typeof window !== "undefined" && analyticsWindow.gtag) {
-      analyticsWindow.gtag("event", eventName, params);
+    if (typeof window !== "undefined") {
+      analyticsWindow.dataLayer = analyticsWindow.dataLayer || [];
+      analyticsWindow.dataLayer.push({
+        event: eventName,
+        ...params,
+      });
+
+      if (analyticsWindow.gtag) {
+        analyticsWindow.gtag("event", eventName, params);
+      }
     }
   };
 
   // Trigger form_view on mount
   useEffect(() => {
-    trackEvent("cvi_form_view");
+    trackEvent("cvi_form_view", {
+      form_id: "cvi_lead_form",
+      form_name: "CVI Fácil Lead Form",
+    });
   }, []);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -344,6 +358,7 @@ export default function Home() {
       ? formData.paisDestinoOutro.trim()
       : formData.paisDestino;
     trackEvent("cvi_form_submitted", { 
+      ...getFormAnalyticsContext(3),
       tipoPet: formData.tipoPet, 
       destino: destinoFinal 
     });
@@ -515,6 +530,81 @@ export default function Home() {
     return persistedState?.formStep === 3 ? "" : persistedState?.submittedWhatsAppUrl ?? "";
   });
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
+  const formAbandonmentTrackedRef = useRef(false);
+
+  const getFormAnalyticsContext = (stepOverride = formStep): AnalyticsParams => {
+    const petCount = formData.qtdGatos + formData.qtdCachorros;
+    const destination = formData.paisDestino === "Outro" ? formData.paisDestinoOutro.trim() : formData.paisDestino;
+    const filledFields = [
+      petCount > 0,
+      Boolean(formData.cidadeOrigem.trim()),
+      Boolean(destination),
+      Boolean(formData.dataViagem),
+      Boolean(formData.nomeTutor.trim()),
+      Boolean(formData.emailOuTelefone.trim()),
+      Boolean(formData.emailOpcional.trim()),
+    ].filter(Boolean).length;
+
+    return {
+      form_id: "cvi_lead_form",
+      form_name: "CVI Fácil Lead Form",
+      form_step: stepOverride,
+      form_step_name: stepOverride === 1 ? "pet_e_viagem" : stepOverride === 2 ? "tutor_e_contato" : "confirmacao",
+      form_completed: stepOverride === 3,
+      destination: destination || null,
+      destination_type: formData.paisDestino || null,
+      travel_window: formData.dataViagem || null,
+      pet_count: petCount,
+      dog_count: formData.qtdCachorros,
+      cat_count: formData.qtdGatos,
+      has_whatsapp: Boolean(formData.emailOuTelefone.trim()),
+      has_optional_email: Boolean(formData.emailOpcional.trim()),
+      filled_fields_count: filledFields,
+    };
+  };
+
+  const hasMeaningfulFormProgress = () => {
+    const context = getFormAnalyticsContext();
+    return Number(context.filled_fields_count ?? 0) > 0;
+  };
+
+  useEffect(() => {
+    trackEvent("cvi_form_step_viewed", getFormAnalyticsContext());
+    // Tracking should fire once per visual step transition, not on every field edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formStep]);
+
+  useEffect(() => {
+    if (formStep === 3) {
+      formAbandonmentTrackedRef.current = true;
+      return;
+    }
+
+    const trackAbandonment = () => {
+      if (formAbandonmentTrackedRef.current || !hasMeaningfulFormProgress()) return;
+      formAbandonmentTrackedRef.current = true;
+      trackEvent("cvi_form_abandoned", {
+        ...getFormAnalyticsContext(),
+        abandonment_step: formStep,
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        trackAbandonment();
+      }
+    };
+
+    window.addEventListener("pagehide", trackAbandonment);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", trackAbandonment);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+    // Rebind on form data changes so the abandonment payload reflects the latest answers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, formStep]);
 
   const clearFieldErrors = (...fields: (keyof FormErrors)[]) => {
     setErrors((currentErrors) => {
@@ -586,9 +676,13 @@ export default function Home() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) {
-      trackEvent("cvi_step_1_completed");
+      trackEvent("cvi_step_1_completed", getFormAnalyticsContext(1));
     } else {
-      trackEvent("cvi_form_error", { step: 1, errors: newErrors });
+      trackEvent("cvi_form_error", {
+        ...getFormAnalyticsContext(1),
+        error_step: 1,
+        error_fields: Object.keys(newErrors),
+      });
     }
     return isValid;
   };
@@ -610,9 +704,13 @@ export default function Home() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) {
-      trackEvent("cvi_step_2_completed");
+      trackEvent("cvi_step_2_completed", getFormAnalyticsContext(1));
     } else {
-      trackEvent("cvi_form_error", { step: 2, errors: newErrors });
+      trackEvent("cvi_form_error", {
+        ...getFormAnalyticsContext(1),
+        error_step: 2,
+        error_fields: Object.keys(newErrors),
+      });
     }
     return isValid;
   };
@@ -642,9 +740,13 @@ export default function Home() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) {
-      trackEvent("cvi_step_3_completed");
+      trackEvent("cvi_step_3_completed", getFormAnalyticsContext(2));
     } else {
-      trackEvent("cvi_form_error", { step: 3, errors: newErrors });
+      trackEvent("cvi_form_error", {
+        ...getFormAnalyticsContext(2),
+        error_step: 3,
+        error_fields: Object.keys(newErrors),
+      });
     }
     return isValid;
   };

@@ -1343,7 +1343,7 @@ export default function Home() {
                 
 
 
-                {/* 1 Passo 1 ━━━━━━━━━ 2 Passo 2 ━━━━━━━━━ 3 Confirmação */}
+                {/* 1 Passo 1 ━━━━━━━━━ 2 Passo 2 */}
                 <div className="flex items-center justify-between pb-5 select-none">
                   <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
@@ -1381,24 +1381,6 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <div className={`flex-1 h-[2px] mx-4 transition-colors ${
-                    formStep > 2 ? "bg-primary" : "bg-gray-100"
-                  }`} />
-
-                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
-                      formStep === 3
-                        ? "bg-whatsapp text-white"
-                        : "bg-gray-100 text-gray-400"
-                    }`}>
-                      3
-                    </div>
-                    <span className={`text-[13px] font-bold ${
-                      formStep === 3 ? "text-navy font-black" : "text-gray-400"
-                    }`}>
-                      Enviado
-                    </span>
-                  </div>
                 </div>
                 <div className="h-px bg-gray-100 mb-6" />
 

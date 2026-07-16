@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "Antes de ativar: selecione as credenciais `Supabase CVI` e `Evolution CVI`. No node `Preparar alerta gestor`, troque `COLE_O_NOME_DA_INSTANCIA_AQUI` e `COLE_O_JID_DO_GRUPO_AQUI@g.us`. A mensagem vai para o grupo, nao para o cliente.",
+        "content": "Antes de ativar: selecione as credenciais `Supabase CVI` e `Evolution CVI`. Na credencial Evolution, o Server Url deve ser a base da API, sem `/manager` e sem `/message`, ex: `https://evo.seudominio.com`. No node `Preparar alerta gestor`, troque a instancia e o JID do grupo.",
         "height": 120,
         "width": 540
       },

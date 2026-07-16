@@ -69,6 +69,51 @@ interface FormErrors {
   quantidadePets?: string;
 }
 
+const formCookieName = "cvi_facil_form_state";
+const defaultFormData: FormData = {
+  nomeTutor: "",
+  emailOuTelefone: "",
+  tipoPet: "",
+  paisDestino: "",
+  paisDestinoOutro: "",
+  dataViagem: "",
+  cidadeOrigem: "",
+  emailOpcional: "",
+  maisDeUmPet: false,
+  quantidadePets: "",
+  qtdGatos: 0,
+  qtdCachorros: 0,
+};
+
+type PersistedFormState = {
+  formData?: Partial<FormData>;
+  formStep?: number;
+  submittedWhatsAppUrl?: string;
+};
+
+function readPersistedFormState(): PersistedFormState | null {
+  if (typeof document === "undefined") return null;
+
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${formCookieName}=`));
+
+  if (!cookie) return null;
+
+  try {
+    return JSON.parse(decodeURIComponent(cookie.split("=").slice(1).join("="))) as PersistedFormState;
+  } catch {
+    return null;
+  }
+}
+
+function persistFormState(state: PersistedFormState) {
+  if (typeof document === "undefined") return;
+
+  const maxAgeInSeconds = 60 * 60 * 24 * 30;
+  document.cookie = `${formCookieName}=${encodeURIComponent(JSON.stringify(state))}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax`;
+}
+
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
@@ -256,19 +301,9 @@ export default function Home() {
   }, []);
 
   // Form states
-  const [formData, setFormData] = useState<FormData>({
-    nomeTutor: "",
-    emailOuTelefone: "",
-    tipoPet: "",
-    paisDestino: "",
-    paisDestinoOutro: "",
-    dataViagem: "",
-    cidadeOrigem: "",
-    emailOpcional: "",
-    maisDeUmPet: false,
-    quantidadePets: "",
-    qtdGatos: 0,
-    qtdCachorros: 0,
+  const [formData, setFormData] = useState<FormData>(() => {
+    const persistedState = readPersistedFormState();
+    return { ...defaultFormData, ...persistedState?.formData };
   });
 
   const [hasStartedForm, setHasStartedForm] = useState(false);
@@ -465,11 +500,17 @@ export default function Home() {
 
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [formStep, setFormStep] = useState(1);
+  const [formStep, setFormStep] = useState(() => {
+    const persistedStep = readPersistedFormState()?.formStep;
+    return persistedStep && persistedStep >= 1 && persistedStep <= 3 ? persistedStep : 1;
+  });
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
-  const [showQuantityCounters, setShowQuantityCounters] = useState(false);
+  const [showQuantityCounters, setShowQuantityCounters] = useState(() => {
+    const persistedFormData = readPersistedFormState()?.formData;
+    return ((persistedFormData?.qtdGatos ?? 0) + (persistedFormData?.qtdCachorros ?? 0)) > 1;
+  });
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
-  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState("");
+  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState(() => readPersistedFormState()?.submittedWhatsAppUrl ?? "");
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
 
   const clearFieldErrors = (...fields: (keyof FormErrors)[]) => {
@@ -479,6 +520,14 @@ export default function Home() {
       return nextErrors;
     });
   };
+
+  useEffect(() => {
+    persistFormState({
+      formData,
+      formStep,
+      submittedWhatsAppUrl,
+    });
+  }, [formData, formStep, submittedWhatsAppUrl]);
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
@@ -1903,7 +1952,7 @@ export default function Home() {
                           <HelpCircle className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
                             type="text"
-                            placeholder="Digite seu e-mail (caso queira)"
+                            placeholder="Digite seu e-mail"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOpcional ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOpcional}
                             onChange={(e) => {

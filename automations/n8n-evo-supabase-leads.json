@@ -87,7 +87,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const lead = $json;\n\n// Edite estes tres valores no n8n antes de ativar o workflow.\nconst evoBaseUrl = 'https://evo.embarcompany.cloud';\nconst evoInstance = 'cvi';\nconst managerGroupJid = 'COLE_O_JID_DO_GRUPO_AQUI@g.us';\n\nlet clientDigits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (clientDigits.length >= 10 && !clientDigits.startsWith('55')) {\n  clientDigits = `55${clientDigits}`;\n}\n\nconst destination = lead.destino_final || 'Destino nao informado';\nconst origin = lead.cidade_origem || 'Origem nao informada';\nconst travelWindow = lead.data_viagem || 'Previsao nao informada';\nconst petSummary = lead.pet_summary || 'Pet nao informado';\nconst createdAt = lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Agora';\nconst campaign = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || 'Sem UTM';\n\nconst text = `Novo lead CVI Facil\\n\\nTutor: ${lead.nome_tutor || 'Nao informado'}\\nWhatsApp: ${lead.whatsapp || 'Nao informado'}\\nWhatsApp normalizado: ${clientDigits || 'Nao informado'}\\nEmail: ${lead.email_opcional || 'Nao informado'}\\n\\nOrigem: ${origin}\\nDestino: ${destination}\\nPrevisao: ${travelWindow}\\nPet: ${petSummary}\\n\\nCampanha: ${campaign}\\nCriado em: ${createdAt}\\nLead ID: ${lead.id}\\n\\nAcionar o tutor pelo WhatsApp acima.`;\n\nreturn [{\n  json: {\n    ...lead,\n    client_whatsapp_normalized: clientDigits,\n    manager_group_jid: managerGroupJid,\n    evo_base_url: evoBaseUrl.replace(/\\/$/, ''),\n    evo_instance: evoInstance,\n    evo_message: text,\n    evo_payload: {\n      number: managerGroupJid,\n      text,\n      delay: 1200,\n      linkPreview: false\n    }\n  }\n}];"
+        "jsCode": "const lead = $json;\n\nconst evoBaseUrl = 'https://evo.embarcompany.cloud';\nconst evoInstance = 'cvi';\nconst managerGroupJid = '120363426954252951@g.us';\n\nlet clientDigits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (clientDigits.length >= 10 && !clientDigits.startsWith('55')) {\n  clientDigits = `55${clientDigits}`;\n}\n\nconst destination = lead.destino_final || 'Destino nao informado';\nconst origin = lead.cidade_origem || 'Origem nao informada';\nconst travelWindow = lead.data_viagem || 'Previsao nao informada';\nconst petSummary = lead.pet_summary || 'Pet nao informado';\nconst createdAt = lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Agora';\nconst campaign = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || 'Sem UTM';\n\nconst text = `Novo lead CVI Facil\\n\\nTutor: ${lead.nome_tutor || 'Nao informado'}\\nWhatsApp: ${lead.whatsapp || 'Nao informado'}\\nWhatsApp normalizado: ${clientDigits || 'Nao informado'}\\nEmail: ${lead.email_opcional || 'Nao informado'}\\n\\nOrigem: ${origin}\\nDestino: ${destination}\\nPrevisao: ${travelWindow}\\nPet: ${petSummary}\\n\\nCampanha: ${campaign}\\nCriado em: ${createdAt}\\nLead ID: ${lead.id}\\n\\nAcionar o tutor pelo WhatsApp acima.`;\n\nreturn [{\n  json: {\n    ...lead,\n    client_whatsapp_normalized: clientDigits,\n    manager_group_jid: managerGroupJid,\n    evo_base_url: evoBaseUrl.replace(/\\/$/, ''),\n    evo_instance: evoInstance,\n    evo_message: text\n  }\n}];"
       },
       "id": "prepare-message",
       "name": "Preparar alerta gestor",
@@ -116,8 +116,27 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{$json.evo_payload}}",
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.manager_group_jid}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.evo_message}}"
+            },
+            {
+              "name": "delay",
+              "value": "={{1200}}"
+            },
+            {
+              "name": "linkPreview",
+              "value": "={{false}}"
+            }
+          ]
+        },
         "options": {
           "response": {
             "response": {
@@ -321,5 +340,5 @@
   ],
   "triggerCount": 2,
   "updatedAt": "2026-07-16T00:00:00.000Z",
-  "versionId": "cvi-facil-evo-supabase-v8"
+  "versionId": "cvi-facil-evo-supabase-v9"
 }

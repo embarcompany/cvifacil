@@ -2213,7 +2213,7 @@ export default function Home() {
 
                   {/* STEP 3: CONFIRMATION AND WHATSAPP HANDOFF */}
                   {formStep === 3 && (
-                    <div className="flex flex-col gap-5 animate-fade-in text-center">
+                    <div id="sucesso-mensagem" className="flex flex-col gap-5 animate-fade-in text-center">
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-whatsapp shadow-[0_8px_20px_rgba(5,184,92,0.12)]">
                         <CheckCircle2 className="h-8 w-8" />
                       </div>

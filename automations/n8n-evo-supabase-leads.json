@@ -1,0 +1,332 @@
+{
+  "name": "CVI Facil - Supabase Leads para Evo",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Rodar manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -980,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Rodar a cada 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -980,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/cvi_leads_evo_pendentes?select=*&limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "get-pending-leads",
+      "name": "Buscar leads pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -720,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nif (inputItems.length > 1) {\n  return inputItems.filter((item) => item.json && item.json.id);\n}\n\nconst body = inputItems[0]?.json;\nconst leads = Array.isArray(body)\n  ? body\n  : Array.isArray(body?.data)\n    ? body.data\n    : body?.id\n      ? [body]\n      : [];\n\nreturn leads.map((lead) => ({ json: lead }));"
+      },
+      "id": "normalize-leads",
+      "name": "Normalizar lista",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Enviar um por vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -240,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $json;\nlet digits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (digits.length >= 10 && !digits.startsWith('55')) {\n  digits = `55${digits}`;\n}\n\nconst destination = lead.destino_final || 'o destino informado';\nconst travelWindow = lead.data_viagem || 'a data informada';\nconst petSummary = lead.pet_summary || 'seu pet';\nconst firstName = String(lead.nome_tutor || '').trim().split(/\\s+/)[0] || 'tudo bem';\n\nconst text = `Olá, ${firstName}! Recebemos sua solicitação para organizar o CVI do seu pet.\\n\\nVi aqui que a viagem é de ${lead.cidade_origem || 'sua cidade'} para ${destination}, com previsão de ${travelWindow}, e o pet informado foi: ${petSummary}.\\n\\nNossa equipe já vai te orientar com os próximos passos para evitar erro de documentação, prazo ou exigência do país de destino.`;\n\nreturn [{\n  json: {\n    ...lead,\n    evo_number: digits,\n    evo_payload: {\n      number: digits,\n      textMessage: { text },\n      delay: 1200,\n      linkPreview: false\n    }\n  }\n}];"
+      },
+      "id": "prepare-message",
+      "name": "Preparar mensagem Evo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EVO_API_URL}}/message/sendText/{{$env.EVO_INSTANCE}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.EVO_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.evo_payload}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "send-evo-message",
+      "name": "Enviar WhatsApp Evo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Preparar mensagem Evo').item.json;\nconst evoResponse = $json;\nconst messageId = evoResponse?.key?.id || evoResponse?.messageId || evoResponse?.id || evoResponse?.response?.key?.id || null;\n\nreturn [{\n  json: {\n    lead_id: lead.id,\n    update_payload: {\n      mensagem_enviada: true,\n      status: 'contatado',\n      evo_message_id: messageId,\n      evo_instance: $env.EVO_INSTANCE,\n      first_contact_at: new Date().toISOString(),\n      last_contact_at: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "prepare-update",
+      "name": "Preparar update Supabase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/cvi_leads?id=eq.{{$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.update_payload}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "update-lead",
+      "name": "Marcar como contatado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Rodar manualmente": {
+      "main": [
+        [
+          {
+            "node": "Buscar leads pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rodar a cada 5 min": {
+      "main": [
+        [
+          {
+            "node": "Buscar leads pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar leads pendentes": {
+      "main": [
+        [
+          {
+            "node": "Normalizar lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar lista": {
+      "main": [
+        [
+          {
+            "node": "Enviar um por vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar um por vez": {
+      "main": [
+        [
+          {
+            "node": "Preparar mensagem Evo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Preparar mensagem Evo": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp Evo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp Evo": {
+      "main": [
+        [
+          {
+            "node": "Preparar update Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar update Supabase": {
+      "main": [
+        [
+          {
+            "node": "Marcar como contatado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como contatado": {
+      "main": [
+        [
+          {
+            "node": "Enviar um por vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "America/Sao_Paulo"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "CVI Facil"
+    },
+    {
+      "name": "Evo"
+    },
+    {
+      "name": "Supabase"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "versionId": "cvi-facil-evo-supabase-v1"
+}

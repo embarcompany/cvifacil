@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -123,6 +124,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} ${manrope.variable}`}>
       <body className="antialiased min-h-screen bg-surface flex flex-col text-text-main">
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );

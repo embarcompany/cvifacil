@@ -697,7 +697,6 @@ export default function Home() {
     };
   }, []);
 
-  const totalSelectedPets = formData.qtdGatos + formData.qtdCachorros;
   const confirmationPetParts = [];
   if (formData.qtdCachorros > 0) {
     confirmationPetParts.push(`${formData.qtdCachorros} ${formData.qtdCachorros === 1 ? "cachorro" : "cachorros"}`);
@@ -2032,7 +2031,6 @@ export default function Home() {
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Tutor</strong>{formData.nomeTutor}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">WhatsApp</strong>{formData.emailOuTelefone}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Pet</strong>{confirmationPetSummary}</span>
-                          <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Quantidade</strong>{totalSelectedPets || "Não informado"}</span>
                         </div>
                       </div>
 

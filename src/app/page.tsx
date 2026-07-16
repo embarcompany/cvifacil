@@ -472,7 +472,7 @@ export default function Home() {
     }
     
     const emailText = formData.emailOpcional.trim() ? formData.emailOpcional : "Não informado";
-    const text = `Olá! Gostaria de iniciar meu CVI.\n\n*DADOS DA VIAGEM:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Data Estimada: ${formData.dataViagem}\n\n*DADOS DO PET:*\n- Espécie/Quantidade: ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets total)" : "Não (Apenas 1 pet)"}\n\n*DADOS DO TUTOR:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}`;
+    const text = `Olá, equipe CVI Fácil! Acabei de enviar meu formulário pelo site e quero antecipar meu atendimento por aqui.\n\n*Resumo da viagem:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Previsão da viagem: ${formData.dataViagem}\n\n*Pet(s):*\n- ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets no total)" : "Não, apenas 1 pet"}\n\n*Dados do tutor:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}\n\nPodem me orientar com os próximos passos?`;
     const encodedText = encodeURIComponent(text);
     setTimeout(() => {
       setSubmittedWhatsAppUrl(`https://wa.me/${whatsappNumber}?text=${encodedText}`);

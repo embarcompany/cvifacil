@@ -1898,13 +1898,6 @@ export default function Home() {
                         <span>Comece agora seu atendimento</span>
                       </a>
 
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(1)}
-                        className="mx-auto text-[13px] font-extrabold text-text-muted transition-colors hover:text-navy"
-                      >
-                        Editar informações
-                      </button>
                     </div>
                   )}
 

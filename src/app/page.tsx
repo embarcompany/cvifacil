@@ -501,7 +501,8 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [formStep, setFormStep] = useState(() => {
     const persistedStep = readPersistedFormState()?.formStep;
-    return persistedStep && persistedStep >= 1 && persistedStep <= 3 ? persistedStep : 1;
+    if (persistedStep === 3) return 2;
+    return persistedStep && persistedStep >= 1 && persistedStep <= 2 ? persistedStep : 1;
   });
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
   const [showQuantityCounters, setShowQuantityCounters] = useState(() => {
@@ -509,7 +510,10 @@ export default function Home() {
     return ((persistedFormData?.qtdGatos ?? 0) + (persistedFormData?.qtdCachorros ?? 0)) > 1;
   });
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
-  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState(() => readPersistedFormState()?.submittedWhatsAppUrl ?? "");
+  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState(() => {
+    const persistedState = readPersistedFormState();
+    return persistedState?.formStep === 3 ? "" : persistedState?.submittedWhatsAppUrl ?? "";
+  });
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
 
   const clearFieldErrors = (...fields: (keyof FormErrors)[]) => {
@@ -523,8 +527,8 @@ export default function Home() {
   useEffect(() => {
     persistFormState({
       formData,
-      formStep,
-      submittedWhatsAppUrl,
+      formStep: formStep === 3 ? 2 : formStep,
+      submittedWhatsAppUrl: formStep === 3 ? "" : submittedWhatsAppUrl,
     });
   }, [formData, formStep, submittedWhatsAppUrl]);
 

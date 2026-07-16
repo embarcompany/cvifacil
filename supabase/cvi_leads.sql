@@ -1,5 +1,19 @@
 create extension if not exists pgcrypto;
 
+do $$
+begin
+  create type public.cvi_lead_status as enum (
+    'novo',
+    'contatado',
+    'em_atendimento',
+    'aguardando_cliente',
+    'convertido',
+    'perdido'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
 create table if not exists public.cvi_leads (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -27,7 +41,109 @@ create table if not exists public.cvi_leads (
   utm_content text,
   gclid text,
   fbclid text,
+  status public.cvi_lead_status not null default 'novo',
+  mensagem_enviada boolean not null default false,
+  evo_message_id text,
+  evo_instance text,
+  first_contact_at timestamptz,
+  last_contact_at timestamptz,
+  next_follow_up_at timestamptz,
+  assigned_to text,
+  observacoes text,
   raw_payload jsonb
 );
 
 alter table public.cvi_leads enable row level security;
+
+alter table public.cvi_leads
+  add column if not exists submitted_at timestamptz,
+  add column if not exists email_opcional text,
+  add column if not exists pais_destino_outro text,
+  add column if not exists destino_final text,
+  add column if not exists qtd_gatos integer not null default 0,
+  add column if not exists qtd_cachorros integer not null default 0,
+  add column if not exists total_pets integer not null default 0,
+  add column if not exists pet_summary text,
+  add column if not exists mais_de_um_pet boolean not null default false,
+  add column if not exists tipo_pet text,
+  add column if not exists page_url text,
+  add column if not exists user_agent text,
+  add column if not exists utm_source text,
+  add column if not exists utm_medium text,
+  add column if not exists utm_campaign text,
+  add column if not exists utm_term text,
+  add column if not exists utm_content text,
+  add column if not exists gclid text,
+  add column if not exists fbclid text,
+  add column if not exists status public.cvi_lead_status not null default 'novo',
+  add column if not exists mensagem_enviada boolean not null default false,
+  add column if not exists evo_message_id text,
+  add column if not exists evo_instance text,
+  add column if not exists first_contact_at timestamptz,
+  add column if not exists last_contact_at timestamptz,
+  add column if not exists next_follow_up_at timestamptz,
+  add column if not exists assigned_to text,
+  add column if not exists observacoes text,
+  add column if not exists raw_payload jsonb;
+
+create index if not exists cvi_leads_created_at_idx on public.cvi_leads (created_at desc);
+create index if not exists cvi_leads_status_idx on public.cvi_leads (status);
+create index if not exists cvi_leads_evo_pending_idx
+  on public.cvi_leads (created_at)
+  where status = 'novo' and mensagem_enviada = false;
+create index if not exists cvi_leads_whatsapp_idx on public.cvi_leads (whatsapp);
+create index if not exists cvi_leads_utm_campaign_idx on public.cvi_leads (utm_campaign);
+
+create or replace view public.cvi_leads_operacao
+with (security_invoker = true)
+as
+select
+  id,
+  created_at,
+  submitted_at,
+  status,
+  mensagem_enviada,
+  nome_tutor,
+  whatsapp,
+  email_opcional,
+  cidade_origem,
+  destino_final,
+  data_viagem,
+  pet_summary,
+  total_pets,
+  utm_source,
+  utm_medium,
+  utm_campaign,
+  utm_content,
+  gclid,
+  fbclid,
+  evo_message_id,
+  evo_instance,
+  first_contact_at,
+  last_contact_at,
+  next_follow_up_at,
+  assigned_to,
+  observacoes
+from public.cvi_leads
+order by created_at desc;
+
+create or replace view public.cvi_leads_evo_pendentes
+with (security_invoker = true)
+as
+select
+  id,
+  created_at,
+  nome_tutor,
+  whatsapp,
+  cidade_origem,
+  destino_final,
+  data_viagem,
+  pet_summary,
+  total_pets,
+  utm_source,
+  utm_medium,
+  utm_campaign
+from public.cvi_leads
+where status = 'novo'
+  and mensagem_enviada = false
+order by created_at asc;

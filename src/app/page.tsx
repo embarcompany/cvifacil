@@ -112,14 +112,97 @@ const embarkTestimonialsTopLoop = [...embarkTestimonialsTop, ...embarkTestimonia
 const embarkTestimonialsBottomLoop = [...embarkTestimonialsBottom, ...embarkTestimonialsBottom];
 
 const destinationOptions = [
-  { value: "Estados Unidos", label: "Estados Unidos", flag: "🇺🇸", hint: "Destino comum para cães e gatos" },
-  { value: "Portugal", label: "Portugal", flag: "🇵🇹", hint: "Viagens frequentes saindo do Brasil" },
-  { value: "Mercosul", label: "Mercosul", flag: "🌎", hint: "Argentina, Uruguai, Paraguai e região" },
-  { value: "União Europeia", label: "União Europeia", flag: "🇪🇺", hint: "França, Espanha, Itália e outros países" },
-  { value: "Reino Unido", label: "Reino Unido", flag: "🇬🇧", hint: "Exigências específicas para entrada" },
-  { value: "Canadá", label: "Canadá", flag: "🇨🇦", hint: "Documentos e prazos revisados" },
-  { value: "Outro", label: "Outro país", flag: "🌐", hint: "Avaliamos o destino com você" },
+  { value: "Estados Unidos", label: "Estados Unidos", flagCode: "us", hint: "Destino comum para cães e gatos" },
+  { value: "Portugal", label: "Portugal", flagCode: "pt", hint: "Viagens frequentes saindo do Brasil" },
+  { value: "Mercosul", label: "Mercosul", flagCode: "mercosul", hint: "Argentina, Uruguai, Paraguai e região" },
+  { value: "União Europeia", label: "União Europeia", flagCode: "eu", hint: "França, Espanha, Itália e outros países" },
+  { value: "Reino Unido", label: "Reino Unido", flagCode: "uk", hint: "Exigências específicas para entrada" },
+  { value: "Canadá", label: "Canadá", flagCode: "ca", hint: "Documentos e prazos revisados" },
+  { value: "Outro", label: "Outro país", flagCode: "other", hint: "Avaliamos o destino com você" },
 ];
+
+function DestinationFlag({ code }: { code: string }) {
+  const className = "h-5 w-7 overflow-hidden rounded-[4px] border border-black/10 shadow-sm";
+
+  if (code === "us") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#fff" />
+        {[0, 3, 6, 9, 12, 15, 18].map((y) => (
+          <rect key={y} y={y} width="28" height="1.6" fill="#b22234" />
+        ))}
+        <rect width="11.5" height="10.8" fill="#3c3b6e" />
+        {[2, 5, 8].map((y) =>
+          [2, 5.5, 9].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="0.55" fill="#fff" />)
+        )}
+      </svg>
+    );
+  }
+
+  if (code === "pt") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="11" height="20" fill="#046a38" />
+        <rect x="11" width="17" height="20" fill="#da291c" />
+        <circle cx="11" cy="10" r="3.1" fill="#ffcd00" />
+        <circle cx="11" cy="10" r="1.8" fill="#fff" />
+      </svg>
+    );
+  }
+
+  if (code === "mercosul") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#0b4ea2" />
+        <path d="M14 4.2 15.2 8h4l-3.2 2.3 1.2 3.7-3.2-2.3-3.2 2.3 1.2-3.7L8.8 8h4L14 4.2Z" fill="#f5c400" />
+        <path d="M5 15.5c4.6-2.6 13.4-2.6 18 0" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (code === "eu") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#003399" />
+        {Array.from({ length: 12 }).map((_, i) => {
+          const angle = (i / 12) * Math.PI * 2;
+          return <circle key={i} cx={14 + Math.cos(angle) * 5} cy={10 + Math.sin(angle) * 5} r="0.75" fill="#ffcc00" />;
+        })}
+      </svg>
+    );
+  }
+
+  if (code === "uk") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#012169" />
+        <path d="M0 0 28 20M28 0 0 20" stroke="#fff" strokeWidth="4" />
+        <path d="M0 0 28 20M28 0 0 20" stroke="#c8102e" strokeWidth="2" />
+        <path d="M14 0v20M0 10h28" stroke="#fff" strokeWidth="6" />
+        <path d="M14 0v20M0 10h28" stroke="#c8102e" strokeWidth="3.4" />
+      </svg>
+    );
+  }
+
+  if (code === "ca") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#fff" />
+        <rect width="6.5" height="20" fill="#d52b1e" />
+        <rect x="21.5" width="6.5" height="20" fill="#d52b1e" />
+        <path d="M14 4.2 15.1 7l2.4-1.2-.9 2.8 2.7.8-2.7 1 1.1 2.6-2.4-1.3L14 16l-1.3-4.3-2.4 1.3 1.1-2.6-2.7-1 2.7-.8-.9-2.8L12.9 7 14 4.2Z" fill="#d52b1e" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+      <rect width="28" height="20" fill="#eef8fc" />
+      <circle cx="14" cy="10" r="6.2" fill="none" stroke="#1182ba" strokeWidth="1.7" />
+      <path d="M7.8 10h12.4M14 3.8c2 2 2 10.4 0 12.4M14 3.8c-2 2-2 10.4 0 12.4" stroke="#1182ba" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function EmbarkTestimonialCard({ testimonial }: { testimonial: EmbarkTestimonial }) {
   return (
@@ -1677,7 +1760,7 @@ export default function Home() {
                                     }`}
                                   >
                                     <span className="flex min-w-0 flex-1 items-center gap-3">
-                                      <span className="text-[18px] leading-none">{option.flag}</span>
+                                      <DestinationFlag code={option.flagCode} />
                                       <span className="truncate text-[15px] font-extrabold">{option.label}</span>
                                     </span>
                                     {isSelected && <Check className="h-4.5 w-4.5 shrink-0 text-white" />}

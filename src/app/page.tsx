@@ -1894,8 +1894,8 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="group flex min-h-[62px] w-full items-center justify-center gap-2 rounded-xl bg-whatsapp text-[15px] font-black uppercase tracking-wide text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-whatsapp-hover active:scale-[0.98]"
                       >
-                        <span>Iniciar atendimento</span>
-                        <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                        <WhatsAppIcon className="h-5 w-5" />
+                        <span>Comece agora seu atendimento</span>
                       </a>
 
                       <button

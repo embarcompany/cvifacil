@@ -191,6 +191,76 @@ h1, h2, h3, h4, h5, h6 {
   animation: softGreenPulse 2.8s ease-in-out infinite;
 }
 
+@keyframes successCompleteIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes successIconPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) rotate(-8deg);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(1.08) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes successRingPulse {
+  0% {
+    opacity: 0.42;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+
+.success-complete {
+  animation: successCompleteIn 360ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.success-complete-icon {
+  position: relative;
+  animation: successIconPop 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.success-complete-ring {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid rgba(5, 184, 92, 0.26);
+  border-radius: 24px;
+  animation: successRingPulse 980ms ease-out 160ms both;
+}
+
+.success-complete-item {
+  animation: successCompleteIn 460ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.success-complete-item:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.success-complete-item:nth-child(3) {
+  animation-delay: 220ms;
+}
+
+.success-complete-item:nth-child(4) {
+  animation-delay: 320ms;
+}
+
 /* Modern text marker/highlighter animation */
 @keyframes highlightDrawInline {
   to {

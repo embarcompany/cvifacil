@@ -164,6 +164,12 @@ function persistFormState(state: PersistedFormState) {
   document.cookie = `${formCookieName}=${encodeURIComponent(JSON.stringify(state))}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax`;
 }
 
+function clearPersistedFormState() {
+  if (typeof document === "undefined") return;
+
+  document.cookie = `${formCookieName}=; path=/; max-age=0; SameSite=Lax`;
+}
+
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
@@ -717,10 +723,15 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (formStep === 3) {
+      clearPersistedFormState();
+      return;
+    }
+
     persistFormState({
       formData,
-      formStep: formStep === 3 ? 2 : formStep,
-      submittedWhatsAppUrl: formStep === 3 ? "" : submittedWhatsAppUrl,
+      formStep,
+      submittedWhatsAppUrl,
     });
   }, [formData, formStep, submittedWhatsAppUrl]);
 
@@ -2213,12 +2224,13 @@ export default function Home() {
 
                   {/* STEP 3: CONFIRMATION AND WHATSAPP HANDOFF */}
                   {formStep === 3 && (
-                    <div id="sucesso-mensagem" className="flex flex-col gap-5 animate-fade-in text-center">
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-whatsapp shadow-[0_8px_20px_rgba(5,184,92,0.12)]">
-                        <CheckCircle2 className="h-8 w-8" />
+                    <div id="sucesso-mensagem" className="success-complete flex flex-col gap-5 text-center">
+                      <div className="success-complete-icon mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-whatsapp shadow-[0_8px_20px_rgba(5,184,92,0.12)]">
+                        <span className="success-complete-ring" />
+                        <CheckCircle2 className="relative z-10 h-8 w-8" />
                       </div>
 
-                      <div>
+                      <div className="success-complete-item">
                         <h3 className="text-[22px] font-black leading-tight text-navy">
                           Formulário enviado com sucesso
                         </h3>
@@ -2227,7 +2239,7 @@ export default function Home() {
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-gray-100 bg-blue-soft/35 p-4 text-left">
+                      <div className="success-complete-item rounded-2xl border border-gray-100 bg-blue-soft/35 p-4 text-left">
                         <div className="grid gap-3 text-[13px] font-bold text-navy sm:grid-cols-2">
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Origem</strong>{formData.cidadeOrigem}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Destino</strong>{formData.paisDestino === "Outro" ? formData.paisDestinoOutro : formData.paisDestino}</span>
@@ -2242,7 +2254,7 @@ export default function Home() {
                         href={submittedWhatsAppUrl || "https://wa.me/5511942452218"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex min-h-[62px] w-full items-center justify-center gap-2 rounded-xl bg-whatsapp text-[15px] font-black uppercase tracking-wide text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-whatsapp-hover active:scale-[0.98]"
+                        className="success-complete-item group flex min-h-[62px] w-full items-center justify-center gap-2 rounded-xl bg-whatsapp text-[15px] font-black uppercase tracking-wide text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-whatsapp-hover active:scale-[0.98]"
                       >
                         <WhatsAppIcon className="h-5 w-5" />
                         <span>Comece agora seu atendimento</span>

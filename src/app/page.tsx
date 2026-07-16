@@ -471,7 +471,6 @@ export default function Home() {
         smoothScrollFrame.current = window.requestAnimationFrame(step);
       } else {
         smoothScrollFrame.current = null;
-        window.history.pushState(null, "", `#${targetId}`);
       }
     };
 

@@ -1,11 +1,11 @@
 {
-  "name": "CVI Facil - Supabase Leads para Evo",
+  "name": "CVI Facil - Supabase Leads para Grupo Evo",
   "nodes": [
     {
       "parameters": {
-        "content": "Antes de ativar: instale o community node `n8n-nodes-evolution-api`, crie a credencial `Supabase CVI` com Host + Service Role e crie a credencial `Evolution CVI` com Server URL + ApiKey. Ajuste `EVO_INSTANCE` no node de envio.",
+        "content": "Antes de ativar: instale `n8n-nodes-evolution-api`, selecione as credenciais `Supabase CVI` e `Evolution CVI`, ajuste `EVO_INSTANCE` e defina `EVO_MANAGER_GROUP_JID` com o JID do grupo interno/gestor. A mensagem vai para o grupo, nao para o cliente.",
         "height": 120,
-        "width": 520
+        "width": 540
       },
       "id": "setup-note",
       "name": "Nota de configuracao",
@@ -87,10 +87,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const lead = $json;\nlet digits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (digits.length >= 10 && !digits.startsWith('55')) {\n  digits = `55${digits}`;\n}\n\nconst destination = lead.destino_final || 'o destino informado';\nconst travelWindow = lead.data_viagem || 'a data informada';\nconst petSummary = lead.pet_summary || 'seu pet';\nconst firstName = String(lead.nome_tutor || '').trim().split(/\\s+/)[0] || 'tudo bem';\n\nconst text = `Olá, ${firstName}! Recebemos sua solicitação para organizar o CVI do seu pet.\\n\\nVi aqui que a viagem é de ${lead.cidade_origem || 'sua cidade'} para ${destination}, com previsão de ${travelWindow}, e o pet informado foi: ${petSummary}.\\n\\nNossa equipe já vai te orientar com os próximos passos para evitar erro de documentação, prazo ou exigência do país de destino.`;\n\nreturn [{\n  json: {\n    ...lead,\n    evo_number: digits,\n    evo_message: text\n  }\n}];"
+        "jsCode": "const lead = $json;\nconst managerGroupJid = $env.EVO_MANAGER_GROUP_JID || 'COLE_O_JID_DO_GRUPO_AQUI@g.us';\nlet clientDigits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (clientDigits.length >= 10 && !clientDigits.startsWith('55')) {\n  clientDigits = `55${clientDigits}`;\n}\n\nconst destination = lead.destino_final || 'Destino nao informado';\nconst origin = lead.cidade_origem || 'Origem nao informada';\nconst travelWindow = lead.data_viagem || 'Previsao nao informada';\nconst petSummary = lead.pet_summary || 'Pet nao informado';\nconst createdAt = lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Agora';\nconst campaign = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || 'Sem UTM';\n\nconst text = `Novo lead CVI Facil\\n\\nTutor: ${lead.nome_tutor || 'Nao informado'}\\nWhatsApp: ${lead.whatsapp || 'Nao informado'}\\nWhatsApp normalizado: ${clientDigits || 'Nao informado'}\\nEmail: ${lead.email_opcional || 'Nao informado'}\\n\\nOrigem: ${origin}\\nDestino: ${destination}\\nPrevisao: ${travelWindow}\\nPet: ${petSummary}\\n\\nCampanha: ${campaign}\\nCriado em: ${createdAt}\\nLead ID: ${lead.id}\\n\\nAcionar o tutor pelo WhatsApp acima.`;\n\nreturn [{\n  json: {\n    ...lead,\n    client_whatsapp_normalized: clientDigits,\n    manager_group_jid: managerGroupJid,\n    evo_message: text\n  }\n}];"
       },
       "id": "prepare-message",
-      "name": "Preparar mensagem",
+      "name": "Preparar alerta gestor",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -103,7 +103,7 @@
         "resource": "messages-api",
         "operation": "send-text",
         "instanceName": "={{$env.EVO_INSTANCE}}",
-        "remoteJid": "={{$json.evo_number}}",
+        "remoteJid": "={{$json.manager_group_jid}}",
         "messageText": "={{$json.evo_message}}",
         "options_message": {
           "delay": 1200,
@@ -111,7 +111,7 @@
         }
       },
       "id": "send-evo-message",
-      "name": "Evolution - Enviar texto",
+      "name": "Evolution - Enviar para grupo",
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
@@ -127,7 +127,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const lead = $('Preparar mensagem').item.json;\nconst response = $json?.data || $json;\nconst messageId = response?.key?.id || response?.messageId || response?.id || response?.response?.key?.id || null;\n\nreturn [{\n  json: {\n    lead_id: lead.id,\n    evo_message_id: messageId,\n    evo_instance: $env.EVO_INSTANCE\n  }\n}];"
+        "jsCode": "const lead = $('Preparar alerta gestor').item.json;\nconst response = $json?.data || $json;\nconst messageId = response?.key?.id || response?.messageId || response?.id || response?.response?.key?.id || null;\n\nreturn [{\n  json: {\n    lead_id: lead.id,\n    evo_message_id: messageId,\n    evo_instance: $env.EVO_INSTANCE\n  }\n}];"
       },
       "id": "prepare-update",
       "name": "Preparar update",
@@ -185,7 +185,7 @@
         }
       },
       "id": "update-lead",
-      "name": "Supabase - Marcar contatado",
+      "name": "Supabase - Marcar notificado",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
@@ -238,7 +238,7 @@
       "main": [
         [
           {
-            "node": "Preparar mensagem",
+            "node": "Preparar alerta gestor",
             "type": "main",
             "index": 0
           }
@@ -246,18 +246,18 @@
         []
       ]
     },
-    "Preparar mensagem": {
+    "Preparar alerta gestor": {
       "main": [
         [
           {
-            "node": "Evolution - Enviar texto",
+            "node": "Evolution - Enviar para grupo",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Evolution - Enviar texto": {
+    "Evolution - Enviar para grupo": {
       "main": [
         [
           {
@@ -272,14 +272,14 @@
       "main": [
         [
           {
-            "node": "Supabase - Marcar contatado",
+            "node": "Supabase - Marcar notificado",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase - Marcar contatado": {
+    "Supabase - Marcar notificado": {
       "main": [
         [
           {
@@ -311,5 +311,5 @@
   ],
   "triggerCount": 2,
   "updatedAt": "2026-07-16T00:00:00.000Z",
-  "versionId": "cvi-facil-evo-supabase-v2"
+  "versionId": "cvi-facil-evo-supabase-v3"
 }

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "Antes de ativar: selecione as credenciais `Supabase CVI` e `Evolution CVI`. Na credencial Evolution, o Server Url deve ser a base da API, sem `/manager` e sem `/message`, ex: `https://evo.seudominio.com`. No node `Preparar alerta gestor`, troque a instancia e o JID do grupo.",
+        "content": "Antes de ativar: selecione a credencial `Supabase CVI`. No node `Preparar alerta gestor`, confirme a URL base, instancia e JID do grupo. No node `Evo HTTP - Enviar para grupo`, cole a API key no header `apikey`. A mensagem vai para o grupo, nao para o cliente.",
         "height": 120,
         "width": 540
       },
@@ -87,7 +87,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const lead = $json;\n\n// Edite estes dois valores no n8n antes de ativar o workflow.\nconst evoInstance = 'COLE_O_NOME_DA_INSTANCIA_AQUI';\nconst managerGroupJid = 'COLE_O_JID_DO_GRUPO_AQUI@g.us';\n\nlet clientDigits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (clientDigits.length >= 10 && !clientDigits.startsWith('55')) {\n  clientDigits = `55${clientDigits}`;\n}\n\nconst destination = lead.destino_final || 'Destino nao informado';\nconst origin = lead.cidade_origem || 'Origem nao informada';\nconst travelWindow = lead.data_viagem || 'Previsao nao informada';\nconst petSummary = lead.pet_summary || 'Pet nao informado';\nconst createdAt = lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Agora';\nconst campaign = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || 'Sem UTM';\n\nconst text = `Novo lead CVI Facil\\n\\nTutor: ${lead.nome_tutor || 'Nao informado'}\\nWhatsApp: ${lead.whatsapp || 'Nao informado'}\\nWhatsApp normalizado: ${clientDigits || 'Nao informado'}\\nEmail: ${lead.email_opcional || 'Nao informado'}\\n\\nOrigem: ${origin}\\nDestino: ${destination}\\nPrevisao: ${travelWindow}\\nPet: ${petSummary}\\n\\nCampanha: ${campaign}\\nCriado em: ${createdAt}\\nLead ID: ${lead.id}\\n\\nAcionar o tutor pelo WhatsApp acima.`;\n\nreturn [{\n  json: {\n    ...lead,\n    client_whatsapp_normalized: clientDigits,\n    manager_group_jid: managerGroupJid,\n    evo_instance: evoInstance,\n    evo_message: text\n  }\n}];"
+        "jsCode": "const lead = $json;\n\n// Edite estes tres valores no n8n antes de ativar o workflow.\nconst evoBaseUrl = 'https://evo.embarcompany.cloud';\nconst evoInstance = 'cvi';\nconst managerGroupJid = 'COLE_O_JID_DO_GRUPO_AQUI@g.us';\n\nlet clientDigits = String(lead.whatsapp || '').replace(/\\D/g, '');\n\nif (clientDigits.length >= 10 && !clientDigits.startsWith('55')) {\n  clientDigits = `55${clientDigits}`;\n}\n\nconst destination = lead.destino_final || 'Destino nao informado';\nconst origin = lead.cidade_origem || 'Origem nao informada';\nconst travelWindow = lead.data_viagem || 'Previsao nao informada';\nconst petSummary = lead.pet_summary || 'Pet nao informado';\nconst createdAt = lead.created_at ? new Date(lead.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Agora';\nconst campaign = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || 'Sem UTM';\n\nconst text = `Novo lead CVI Facil\\n\\nTutor: ${lead.nome_tutor || 'Nao informado'}\\nWhatsApp: ${lead.whatsapp || 'Nao informado'}\\nWhatsApp normalizado: ${clientDigits || 'Nao informado'}\\nEmail: ${lead.email_opcional || 'Nao informado'}\\n\\nOrigem: ${origin}\\nDestino: ${destination}\\nPrevisao: ${travelWindow}\\nPet: ${petSummary}\\n\\nCampanha: ${campaign}\\nCriado em: ${createdAt}\\nLead ID: ${lead.id}\\n\\nAcionar o tutor pelo WhatsApp acima.`;\n\nreturn [{\n  json: {\n    ...lead,\n    client_whatsapp_normalized: clientDigits,\n    manager_group_jid: managerGroupJid,\n    evo_base_url: evoBaseUrl.replace(/\\/$/, ''),\n    evo_instance: evoInstance,\n    evo_message: text\n  }\n}];"
       },
       "id": "prepare-message",
       "name": "Preparar alerta gestor",
@@ -100,30 +100,40 @@
     },
     {
       "parameters": {
-        "resource": "messages-api",
-        "operation": "send-text",
-        "instanceName": "={{$json.evo_instance}}",
-        "remoteJid": "={{$json.manager_group_jid}}",
-        "messageText": "={{$json.evo_message}}",
-        "options_message": {
-          "delay": 1200,
-          "linkPreview": false
+        "method": "POST",
+        "url": "={{$json.evo_base_url}}/message/sendText/{{$json.evo_instance}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "COLE_A_API_KEY_DA_EVO_AQUI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": $json.manager_group_jid,\n  \"text\": $json.evo_message,\n  \"delay\": 1200,\n  \"linkPreview\": false\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
       "id": "send-evo-message",
-      "name": "Evolution - Enviar para grupo",
-      "type": "n8n-nodes-evolution-api.evolutionApi",
-      "typeVersion": 1,
+      "name": "Evo HTTP - Enviar para grupo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         60,
         240
-      ],
-      "credentials": {
-        "evolutionApi": {
-          "id": "REPLACE_EVOLUTION_CREDENTIAL_ID",
-          "name": "Evolution CVI"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -250,14 +260,14 @@
       "main": [
         [
           {
-            "node": "Evolution - Enviar para grupo",
+            "node": "Evo HTTP - Enviar para grupo",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Evolution - Enviar para grupo": {
+    "Evo HTTP - Enviar para grupo": {
       "main": [
         [
           {
@@ -311,5 +321,5 @@
   ],
   "triggerCount": 2,
   "updatedAt": "2026-07-16T00:00:00.000Z",
-  "versionId": "cvi-facil-evo-supabase-v4"
+  "versionId": "cvi-facil-evo-supabase-v5"
 }

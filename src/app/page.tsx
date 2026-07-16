@@ -1760,8 +1760,8 @@ export default function Home() {
                                 const selectedDestination = destinationOptions.find((option) => option.value === formData.paisDestino);
                                 return (
                                   <span className="flex min-w-0 items-center gap-3">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-primary">
-                                      <Globe2 className="h-4.5 w-4.5" />
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-soft">
+                                      <DestinationFlag code={selectedDestination?.flagCode ?? "other"} />
                                     </span>
                                     <span className="flex min-w-0 flex-col">
                                       <span className="truncate text-[16px] font-extrabold text-navy">

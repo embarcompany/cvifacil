@@ -70,6 +70,10 @@ interface FormErrors {
 }
 
 type AnalyticsParams = Record<string, string | number | boolean | string[] | null | undefined>;
+type EnhancedConversionUserData = {
+  email?: string;
+  phone_number?: string;
+};
 
 const formCookieName = "cvi_facil_form_state";
 const defaultFormData: FormData = {
@@ -177,6 +181,19 @@ function createLeadId() {
 
     return (Number(character) ^ (randomValue & (15 >> (Number(character) / 4)))).toString(16);
   });
+}
+
+function normalizePhoneToE164(value: string) {
+  let digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  digits = digits.replace(/^0+/, "");
+  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
+    digits = `55${digits}`;
+  }
+
+  const e164Phone = `+${digits}`;
+  return /^\+\d{11,15}$/.test(e164Phone) ? e164Phone : "";
 }
 
 function clearPersistedFormState() {
@@ -383,8 +400,12 @@ export default function Home() {
   const trackEvent = (eventName: string, params: AnalyticsParams = {}) => {
     console.log("[Analytics Event] " + eventName, params);
     const analyticsWindow = window as Window & {
-      dataLayer?: AnalyticsParams[];
-      gtag?: (type: "event", name: string, params: AnalyticsParams) => void;
+      dataLayer?: unknown[];
+      gtag?: (
+        command: "event" | "set",
+        name: string,
+        params: AnalyticsParams | EnhancedConversionUserData
+      ) => void;
     };
     if (typeof window !== "undefined") {
       analyticsWindow.dataLayer = analyticsWindow.dataLayer || [];
@@ -396,6 +417,29 @@ export default function Home() {
       if (analyticsWindow.gtag) {
         analyticsWindow.gtag("event", eventName, params);
       }
+    }
+  };
+
+  const setEnhancedConversionUserData = (userData: EnhancedConversionUserData) => {
+    const cleanUserData = Object.fromEntries(
+      Object.entries(userData).filter(([, value]) => Boolean(value))
+    ) as EnhancedConversionUserData;
+
+    if (Object.keys(cleanUserData).length === 0 || typeof window === "undefined") return;
+
+    const analyticsWindow = window as Window & {
+      dataLayer?: unknown[];
+      gtag?: (command: "set", name: "user_data", params: EnhancedConversionUserData) => void;
+      cviEnhancedConversionUserData?: EnhancedConversionUserData;
+    };
+
+    analyticsWindow.dataLayer = analyticsWindow.dataLayer || [];
+    analyticsWindow.cviEnhancedConversionUserData = cleanUserData;
+
+    if (analyticsWindow.gtag) {
+      analyticsWindow.gtag("set", "user_data", cleanUserData);
+    } else {
+      analyticsWindow.dataLayer.push(["set", "user_data", cleanUserData]);
     }
   };
 
@@ -453,6 +497,7 @@ export default function Home() {
     const tutorName = formData.nomeTutor.trim();
     const tutorPhone = formData.emailOuTelefone.trim();
     const tutorPhoneDigits = tutorPhone.replace(/\D/g, "");
+    const tutorPhoneE164 = normalizePhoneToE164(tutorPhone);
     const tutorEmail = formData.emailOpcional.trim();
     const leadPayload: LeadDatabasePayload = {
       id: leadId,
@@ -476,6 +521,11 @@ export default function Home() {
       ...getUrlTrackingParams(),
     };
 
+    setEnhancedConversionUserData({
+      email: tutorEmail || undefined,
+      phone_number: tutorPhoneE164 || undefined,
+    });
+
     trackEvent("cvi_form_submitted", { 
       ...analyticsContext,
       tipoPet: formData.tipoPet, 
@@ -486,6 +536,7 @@ export default function Home() {
       tutor_name: tutorName,
       tutor_phone: tutorPhone,
       tutor_phone_digits: tutorPhoneDigits,
+      tutor_phone_e164: tutorPhoneE164,
       tutor_email: tutorEmail,
     });
 

@@ -18,6 +18,15 @@ const getNumber = (payload: LeadSubmissionPayload, key: string) => {
 
 const getBoolean = (payload: LeadSubmissionPayload, key: string) => payload[key] === true;
 
+const getUuid = (payload: LeadSubmissionPayload, key: string) => {
+  const value = getString(payload, key);
+  if (!value) return null;
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
+};
+
 export async function POST(request: Request) {
   let payload: LeadSubmissionPayload;
 
@@ -49,7 +58,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const leadId = getUuid(payload, "id");
   const row = {
+    ...(leadId ? { id: leadId } : {}),
     submitted_at: getString(payload, "submitted_at"),
     nome_tutor: nomeTutor,
     whatsapp: whatsapp,

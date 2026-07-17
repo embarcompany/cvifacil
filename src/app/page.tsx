@@ -94,6 +94,7 @@ type PersistedFormState = {
 };
 
 type LeadDatabasePayload = {
+  id: string;
   submitted_at: string;
   nome_tutor: string;
   whatsapp: string;
@@ -162,6 +163,20 @@ function persistFormState(state: PersistedFormState) {
 
   const maxAgeInSeconds = 60 * 60 * 24 * 30;
   document.cookie = `${formCookieName}=${encodeURIComponent(JSON.stringify(state))}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax`;
+}
+
+function createLeadId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (character) => {
+    const randomValue = typeof crypto !== "undefined" && "getRandomValues" in crypto
+      ? crypto.getRandomValues(new Uint8Array(1))[0]
+      : Math.floor(Math.random() * 256);
+
+    return (Number(character) ^ (randomValue & (15 >> (Number(character) / 4)))).toString(16);
+  });
 }
 
 function clearPersistedFormState() {
@@ -434,11 +449,13 @@ export default function Home() {
     if (formData.qtdGatos > 0) petDetailParts.push(`${formData.qtdGatos} gato(s)`);
     const petDetails = petDetailParts.join(" e ");
     const analyticsContext = getFormAnalyticsContext(3);
+    const leadId = createLeadId();
     const tutorName = formData.nomeTutor.trim();
     const tutorPhone = formData.emailOuTelefone.trim();
     const tutorPhoneDigits = tutorPhone.replace(/\D/g, "");
     const tutorEmail = formData.emailOpcional.trim();
     const leadPayload: LeadDatabasePayload = {
+      id: leadId,
       submitted_at: new Date().toISOString(),
       nome_tutor: tutorName,
       whatsapp: tutorPhone,
@@ -463,6 +480,9 @@ export default function Home() {
       ...analyticsContext,
       tipoPet: formData.tipoPet, 
       destino: destinoFinal,
+      lead_id: leadId,
+      user_id: leadId,
+      event_id: leadId,
       tutor_name: tutorName,
       tutor_phone: tutorPhone,
       tutor_phone_digits: tutorPhoneDigits,

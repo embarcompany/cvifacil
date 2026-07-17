@@ -434,11 +434,15 @@ export default function Home() {
     if (formData.qtdGatos > 0) petDetailParts.push(`${formData.qtdGatos} gato(s)`);
     const petDetails = petDetailParts.join(" e ");
     const analyticsContext = getFormAnalyticsContext(3);
+    const tutorName = formData.nomeTutor.trim();
+    const tutorPhone = formData.emailOuTelefone.trim();
+    const tutorPhoneDigits = tutorPhone.replace(/\D/g, "");
+    const tutorEmail = formData.emailOpcional.trim();
     const leadPayload: LeadDatabasePayload = {
       submitted_at: new Date().toISOString(),
-      nome_tutor: formData.nomeTutor.trim(),
-      whatsapp: formData.emailOuTelefone.trim(),
-      email_opcional: formData.emailOpcional.trim() || null,
+      nome_tutor: tutorName,
+      whatsapp: tutorPhone,
+      email_opcional: tutorEmail || null,
       cidade_origem: formData.cidadeOrigem.trim(),
       pais_destino: formData.paisDestino,
       pais_destino_outro: formData.paisDestino === "Outro" ? formData.paisDestinoOutro.trim() || null : null,
@@ -458,7 +462,11 @@ export default function Home() {
     trackEvent("cvi_form_submitted", { 
       ...analyticsContext,
       tipoPet: formData.tipoPet, 
-      destino: destinoFinal 
+      destino: destinoFinal,
+      tutor_name: tutorName,
+      tutor_phone: tutorPhone,
+      tutor_phone_digits: tutorPhoneDigits,
+      tutor_email: tutorEmail,
     });
 
     try {

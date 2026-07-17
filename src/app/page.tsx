@@ -389,10 +389,8 @@ export default function Home() {
   }, []);
 
   // Form states
-  const [formData, setFormData] = useState<FormData>(() => {
-    const persistedState = readPersistedFormState();
-    return { ...defaultFormData, ...persistedState?.formData };
-  });
+  const [isMounted, setIsMounted] = useState(false);
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
 
   const [hasStartedForm, setHasStartedForm] = useState(false);
 
@@ -401,11 +399,6 @@ export default function Home() {
     console.log("[Analytics Event] " + eventName, params);
     const analyticsWindow = window as Window & {
       dataLayer?: unknown[];
-      gtag?: (
-        command: "event" | "set",
-        name: string,
-        params: AnalyticsParams | EnhancedConversionUserData
-      ) => void;
     };
     if (typeof window !== "undefined") {
       analyticsWindow.dataLayer = analyticsWindow.dataLayer || [];
@@ -413,10 +406,6 @@ export default function Home() {
         event: eventName,
         ...params,
       });
-
-      if (analyticsWindow.gtag) {
-        analyticsWindow.gtag("event", eventName, params);
-      }
     }
   };
 
@@ -429,18 +418,17 @@ export default function Home() {
 
     const analyticsWindow = window as Window & {
       dataLayer?: unknown[];
-      gtag?: (command: "set", name: "user_data", params: EnhancedConversionUserData) => void;
       cviEnhancedConversionUserData?: EnhancedConversionUserData;
     };
 
     analyticsWindow.dataLayer = analyticsWindow.dataLayer || [];
     analyticsWindow.cviEnhancedConversionUserData = cleanUserData;
-
-    if (analyticsWindow.gtag) {
-      analyticsWindow.gtag("set", "user_data", cleanUserData);
-    } else {
-      analyticsWindow.dataLayer.push(["set", "user_data", cleanUserData]);
-    }
+    analyticsWindow.dataLayer.push({
+      event: "cvi_enhanced_conversion_user_data",
+      user_data: cleanUserData,
+      email: cleanUserData.email,
+      phone_number: cleanUserData.phone_number,
+    });
   };
 
   // Trigger form_view on mount
@@ -701,23 +689,35 @@ export default function Home() {
 
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [formStep, setFormStep] = useState(() => {
-    const persistedStep = readPersistedFormState()?.formStep;
-    if (persistedStep === 3) return 2;
-    return persistedStep && persistedStep >= 1 && persistedStep <= 2 ? persistedStep : 1;
-  });
+  const [formStep, setFormStep] = useState(1);
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
-  const [showQuantityCounters, setShowQuantityCounters] = useState(() => {
-    const persistedFormData = readPersistedFormState()?.formData;
-    return ((persistedFormData?.qtdGatos ?? 0) + (persistedFormData?.qtdCachorros ?? 0)) > 1;
-  });
+  const [showQuantityCounters, setShowQuantityCounters] = useState(false);
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
-  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState(() => {
-    const persistedState = readPersistedFormState();
-    return persistedState?.formStep === 3 ? "" : persistedState?.submittedWhatsAppUrl ?? "";
-  });
+  const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState("");
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
   const formAbandonmentTrackedRef = useRef(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    queueMicrotask(() => {
+      if (!isActive) return;
+
+      const persistedState = readPersistedFormState();
+      const persistedFormData = { ...defaultFormData, ...persistedState?.formData };
+      const persistedStep = persistedState?.formStep;
+
+      setFormData(persistedFormData);
+      setFormStep(persistedStep && persistedStep >= 1 && persistedStep <= 2 ? persistedStep : 1);
+      setShowQuantityCounters((persistedFormData.qtdGatos + persistedFormData.qtdCachorros) > 1);
+      setSubmittedWhatsAppUrl(persistedState?.formStep === 3 ? "" : persistedState?.submittedWhatsAppUrl ?? "");
+      setIsMounted(true);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const getFormAnalyticsContext = (stepOverride = formStep): AnalyticsParams => {
     const petCount = formData.qtdGatos + formData.qtdCachorros;
@@ -756,12 +756,16 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!isMounted) return;
+
     trackEvent("cvi_form_step_viewed", getFormAnalyticsContext());
     // Tracking should fire once per visual step transition, not on every field edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formStep]);
+  }, [formStep, isMounted]);
 
   useEffect(() => {
+    if (!isMounted) return;
+
     if (formStep === 3) {
       formAbandonmentTrackedRef.current = true;
       return;
@@ -791,7 +795,7 @@ export default function Home() {
     };
     // Rebind on form data changes so the abandonment payload reflects the latest answers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, formStep]);
+  }, [formData, formStep, isMounted]);
 
   const clearFieldErrors = (...fields: (keyof FormErrors)[]) => {
     setErrors((currentErrors) => {
@@ -802,6 +806,8 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!isMounted) return;
+
     if (formStep === 3) {
       clearPersistedFormState();
       return;
@@ -812,7 +818,7 @@ export default function Home() {
       formStep,
       submittedWhatsAppUrl,
     });
-  }, [formData, formStep, submittedWhatsAppUrl]);
+  }, [formData, formStep, submittedWhatsAppUrl, isMounted]);
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
@@ -2213,10 +2219,12 @@ export default function Home() {
 
                       {/* Nome do tutor with User icon */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Nome do tutor</label>
+                        <label htmlFor="tutor_name" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Nome do tutor</label>
                         <div className="relative flex items-center">
                           <User className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
+                            id="tutor_name"
+                            name="tutor_name"
                             type="text"
                             placeholder="Digite seu nome completo"
                             autoComplete="name"
@@ -2233,12 +2241,15 @@ export default function Home() {
 
                       {/* WhatsApp with Phone icon */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">WhatsApp</label>
+                        <label htmlFor="tutor_phone" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">WhatsApp</label>
                         <div className="relative flex items-center">
                           <Phone className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
+                            id="tutor_phone"
+                            name="tutor_phone"
                             type="text"
                             placeholder="Ex: (11) 94245-2218"
+                            autoComplete="tel"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOuTelefone}
                             onChange={(e) => {
@@ -2253,12 +2264,15 @@ export default function Home() {
 
                       {/* E-mail (Opcional) with outline icon */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">E-mail (Opcional)</label>
+                        <label htmlFor="tutor_email" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">E-mail (Opcional)</label>
                         <div className="relative flex items-center">
                           <HelpCircle className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
+                            id="tutor_email"
+                            name="tutor_email"
                             type="text"
                             placeholder="Digite seu e-mail"
+                            autoComplete="email"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOpcional ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOpcional}
                             onChange={(e) => {

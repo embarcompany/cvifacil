@@ -135,6 +135,7 @@ select
   created_at,
   nome_tutor,
   whatsapp,
+  email_opcional,
   cidade_origem,
   destino_final,
   data_viagem,

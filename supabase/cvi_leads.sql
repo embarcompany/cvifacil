@@ -20,6 +20,10 @@ create table if not exists public.cvi_leads (
   submitted_at timestamptz,
   nome_tutor text not null,
   whatsapp text not null,
+  whatsapp_e164 text,
+  whatsapp_country text,
+  whatsapp_country_code text,
+  whatsapp_international text,
   email_opcional text,
   cidade_origem text,
   pais_destino text,
@@ -57,6 +61,10 @@ alter table public.cvi_leads enable row level security;
 
 alter table public.cvi_leads
   add column if not exists submitted_at timestamptz,
+  add column if not exists whatsapp_e164 text,
+  add column if not exists whatsapp_country text,
+  add column if not exists whatsapp_country_code text,
+  add column if not exists whatsapp_international text,
   add column if not exists email_opcional text,
   add column if not exists pais_destino_outro text,
   add column if not exists destino_final text,
@@ -92,7 +100,10 @@ create index if not exists cvi_leads_evo_pending_idx
   on public.cvi_leads (created_at)
   where status = 'novo' and mensagem_enviada = false;
 create index if not exists cvi_leads_whatsapp_idx on public.cvi_leads (whatsapp);
+create index if not exists cvi_leads_whatsapp_e164_idx on public.cvi_leads (whatsapp_e164);
 create index if not exists cvi_leads_utm_campaign_idx on public.cvi_leads (utm_campaign);
+
+drop view if exists public.cvi_leads_operacao;
 
 create or replace view public.cvi_leads_operacao
 with (security_invoker = true)
@@ -105,7 +116,12 @@ select
   mensagem_enviada,
   nome_tutor,
   whatsapp,
+  whatsapp_e164,
+  whatsapp_country,
+  whatsapp_country_code,
+  whatsapp_international,
   email_opcional,
+  raw_payload,
   cidade_origem,
   destino_final,
   data_viagem,
@@ -127,6 +143,8 @@ select
 from public.cvi_leads
 order by created_at desc;
 
+drop view if exists public.cvi_leads_evo_pendentes;
+
 create or replace view public.cvi_leads_evo_pendentes
 with (security_invoker = true)
 as
@@ -135,7 +153,12 @@ select
   created_at,
   nome_tutor,
   whatsapp,
+  whatsapp_e164,
+  whatsapp_country,
+  whatsapp_country_code,
+  whatsapp_international,
   email_opcional,
+  raw_payload,
   cidade_origem,
   destino_final,
   data_viagem,

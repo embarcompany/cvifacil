@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { 
   ShieldCheck, 
   CheckCircle2, 
@@ -75,6 +76,15 @@ type EnhancedConversionUserData = {
   phone_number?: string;
 };
 
+type NormalizedPhone = {
+  e164: string;
+  digits: string;
+  country?: string;
+  countryCallingCode: string;
+  international: string;
+  national: string;
+};
+
 const formCookieName = "cvi_facil_form_state";
 const defaultFormData: FormData = {
   nomeTutor: "",
@@ -102,6 +112,10 @@ type LeadDatabasePayload = {
   submitted_at: string;
   nome_tutor: string;
   whatsapp: string;
+  whatsapp_e164: string | null;
+  whatsapp_country: string | null;
+  whatsapp_country_code: string | null;
+  whatsapp_international: string | null;
   email_opcional: string | null;
   cidade_origem: string;
   pais_destino: string;
@@ -183,17 +197,29 @@ function createLeadId() {
   });
 }
 
-function normalizePhoneToE164(value: string) {
-  let digits = value.replace(/\D/g, "");
-  if (!digits) return "";
+function normalizePhone(value: string): NormalizedPhone | null {
+  const rawValue = value.trim();
+  if (!rawValue || rawValue.includes("@")) return null;
 
-  digits = digits.replace(/^0+/, "");
-  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
-    digits = `55${digits}`;
-  }
+  const phone = rawValue.startsWith("+")
+    ? parsePhoneNumberFromString(rawValue)
+    : parsePhoneNumberFromString(rawValue, "BR");
 
-  const e164Phone = `+${digits}`;
-  return /^\+\d{11,15}$/.test(e164Phone) ? e164Phone : "";
+  if (!phone || !phone.isPossible()) return null;
+
+  return {
+    e164: phone.number,
+    digits: phone.number.replace(/\D/g, ""),
+    country: phone.country,
+    countryCallingCode: phone.countryCallingCode,
+    international: phone.formatInternational(),
+    national: phone.formatNational(),
+  };
+}
+
+function formatPetQuantity(quantity: number, singular: string, plural: string) {
+  if (quantity === 1) return `1 ${singular}`;
+  return `${quantity} ${plural}`;
 }
 
 function clearPersistedFormState() {
@@ -477,21 +503,26 @@ export default function Home() {
     const whatsappNumber = "5511942452218";
     const totalPets = formData.qtdGatos + formData.qtdCachorros;
     const petDetailParts = [];
-    if (formData.qtdCachorros > 0) petDetailParts.push(`${formData.qtdCachorros} cão(cães)`);
-    if (formData.qtdGatos > 0) petDetailParts.push(`${formData.qtdGatos} gato(s)`);
+    if (formData.qtdCachorros > 0) petDetailParts.push(formatPetQuantity(formData.qtdCachorros, "cachorro", "cachorros"));
+    if (formData.qtdGatos > 0) petDetailParts.push(formatPetQuantity(formData.qtdGatos, "gato", "gatos"));
     const petDetails = petDetailParts.join(" e ");
     const analyticsContext = getFormAnalyticsContext(3);
     const leadId = createLeadId();
     const tutorName = formData.nomeTutor.trim();
     const tutorPhone = formData.emailOuTelefone.trim();
-    const tutorPhoneDigits = tutorPhone.replace(/\D/g, "");
-    const tutorPhoneE164 = normalizePhoneToE164(tutorPhone);
+    const normalizedTutorPhone = normalizePhone(tutorPhone);
+    const tutorPhoneDigits = normalizedTutorPhone?.digits || tutorPhone.replace(/\D/g, "");
+    const tutorPhoneE164 = normalizedTutorPhone?.e164 || "";
     const tutorEmail = formData.emailOpcional.trim();
     const leadPayload: LeadDatabasePayload = {
       id: leadId,
       submitted_at: new Date().toISOString(),
       nome_tutor: tutorName,
       whatsapp: tutorPhone,
+      whatsapp_e164: normalizedTutorPhone?.e164 || null,
+      whatsapp_country: normalizedTutorPhone?.country || null,
+      whatsapp_country_code: normalizedTutorPhone?.countryCallingCode || null,
+      whatsapp_international: normalizedTutorPhone?.international || null,
       email_opcional: tutorEmail || null,
       cidade_origem: formData.cidadeOrigem.trim(),
       pais_destino: formData.paisDestino,
@@ -525,6 +556,8 @@ export default function Home() {
       tutor_phone: tutorPhone,
       tutor_phone_digits: tutorPhoneDigits,
       tutor_phone_e164: tutorPhoneE164,
+      tutor_phone_country: normalizedTutorPhone?.country || null,
+      tutor_phone_country_code: normalizedTutorPhone?.countryCallingCode || null,
       tutor_email: tutorEmail,
     });
 
@@ -923,11 +956,8 @@ export default function Home() {
       newErrors.emailOuTelefone = "Por favor, informe seu WhatsApp";
     } else if (contact.includes("@")) {
       newErrors.emailOuTelefone = "Por favor, informe apenas seu WhatsApp (e-mail não aceito)";
-    } else {
-      const phoneDigits = contact.replace(/\D/g, "");
-      if (phoneDigits.length < 10) {
-        newErrors.emailOuTelefone = "Informe um WhatsApp válido com DDD";
-      }
+    } else if (!normalizePhone(contact)) {
+      newErrors.emailOuTelefone = "Informe um WhatsApp válido. Para números fora do Brasil, inclua o DDI. Ex: +351 912 345 678";
     }
     if (formData.emailOpcional.trim()) {
       const emailRegex = /^\S+@\S+\.\S+$/;
@@ -2248,14 +2278,13 @@ export default function Home() {
                             id="tutor_phone"
                             name="tutor_phone"
                             type="text"
-                            placeholder="Ex: (11) 94245-2218"
+                            placeholder="Ex: +55 11 94245-2218"
                             autoComplete="tel"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOuTelefone}
                             onChange={(e) => {
                               setFormData({ ...formData, emailOuTelefone: e.target.value });
-                              const phoneDigits = e.target.value.replace(/\D/g, "");
-                              if (phoneDigits.length >= 10 && !e.target.value.includes("@")) clearFieldErrors("emailOuTelefone");
+                              if (normalizePhone(e.target.value)) clearFieldErrors("emailOuTelefone");
                             }}
                           />
                         </div>

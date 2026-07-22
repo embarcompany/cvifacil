@@ -44,6 +44,10 @@ create table if not exists public.cvi_leads (
   utm_term text,
   utm_content text,
   gclid text,
+  gbraid text,
+  wbraid text,
+  msclkid text,
+  ttclid text,
   fbclid text,
   status public.cvi_lead_status not null default 'novo',
   mensagem_enviada boolean not null default false,
@@ -82,6 +86,10 @@ alter table public.cvi_leads
   add column if not exists utm_term text,
   add column if not exists utm_content text,
   add column if not exists gclid text,
+  add column if not exists gbraid text,
+  add column if not exists wbraid text,
+  add column if not exists msclkid text,
+  add column if not exists ttclid text,
   add column if not exists fbclid text,
   add column if not exists status public.cvi_lead_status not null default 'novo',
   add column if not exists mensagem_enviada boolean not null default false,
@@ -102,6 +110,8 @@ create index if not exists cvi_leads_evo_pending_idx
 create index if not exists cvi_leads_whatsapp_idx on public.cvi_leads (whatsapp);
 create index if not exists cvi_leads_whatsapp_e164_idx on public.cvi_leads (whatsapp_e164);
 create index if not exists cvi_leads_utm_campaign_idx on public.cvi_leads (utm_campaign);
+create index if not exists cvi_leads_gbraid_idx on public.cvi_leads (gbraid);
+create index if not exists cvi_leads_wbraid_idx on public.cvi_leads (wbraid);
 
 drop view if exists public.cvi_leads_operacao;
 
@@ -132,6 +142,10 @@ select
   utm_campaign,
   utm_content,
   gclid,
+  gbraid,
+  wbraid,
+  msclkid,
+  ttclid,
   fbclid,
   evo_message_id,
   evo_instance,
@@ -166,7 +180,13 @@ select
   total_pets,
   utm_source,
   utm_medium,
-  utm_campaign
+  utm_campaign,
+  gclid,
+  gbraid,
+  wbraid,
+  msclkid,
+  ttclid,
+  fbclid
 from public.cvi_leads
 where status = 'novo'
   and mensagem_enviada = false

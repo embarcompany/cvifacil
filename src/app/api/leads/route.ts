@@ -27,6 +27,29 @@ const getUuid = (payload: LeadSubmissionPayload, key: string) => {
     : null;
 };
 
+const nonCriticalColumns = [
+  "whatsapp_e164",
+  "whatsapp_country",
+  "whatsapp_country_code",
+  "whatsapp_international",
+  "gbraid",
+  "wbraid",
+  "msclkid",
+  "ttclid",
+] as const;
+
+const shouldRetryWithoutNonCriticalColumns = (status: number, responseText: string) => {
+  if (status !== 400) return false;
+
+  return /Could not find|schema cache|column/i.test(responseText);
+};
+
+const stripNonCriticalColumns = (row: Record<string, unknown>) => {
+  const fallbackRow = { ...row };
+  nonCriticalColumns.forEach((column) => delete fallbackRow[column]);
+  return fallbackRow;
+};
+
 export async function POST(request: Request) {
   let payload: LeadSubmissionPayload;
 
@@ -88,12 +111,16 @@ export async function POST(request: Request) {
     utm_term: getString(payload, "utm_term"),
     utm_content: getString(payload, "utm_content"),
     gclid: getString(payload, "gclid"),
+    gbraid: getString(payload, "gbraid"),
+    wbraid: getString(payload, "wbraid"),
+    msclkid: getString(payload, "msclkid"),
+    ttclid: getString(payload, "ttclid"),
     fbclid: getString(payload, "fbclid"),
     raw_payload: payload,
   };
 
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}`, {
+    const insertLead = (rowToInsert: Record<string, unknown>) => fetch(`${supabaseUrl}/rest/v1/${tableName}`, {
       method: "POST",
       headers: {
         apikey: serviceRoleKey,
@@ -101,13 +128,26 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(rowToInsert),
       cache: "no-store",
     });
 
+    const response = await insertLead(row);
     const responseText = await response.text();
 
     if (!response.ok) {
+      if (shouldRetryWithoutNonCriticalColumns(response.status, responseText)) {
+        const fallbackResponse = await insertLead(stripNonCriticalColumns(row));
+        const fallbackResponseText = await fallbackResponse.text();
+
+        if (fallbackResponse.ok) {
+          const lead = fallbackResponseText ? JSON.parse(fallbackResponseText) : null;
+          return Response.json({ ok: true, lead, fallback: "without_non_critical_columns" });
+        }
+
+        console.error("[cvi-leads] Supabase fallback insert failed", fallbackResponse.status, fallbackResponseText);
+      }
+
       console.error("[cvi-leads] Supabase insert failed", response.status, responseText);
       return Response.json(
         { ok: false, error: "supabase_insert_failed" },

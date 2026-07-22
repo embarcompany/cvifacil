@@ -136,6 +136,10 @@ type LeadDatabasePayload = {
   utm_term?: string;
   utm_content?: string;
   gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  msclkid?: string;
+  ttclid?: string;
   fbclid?: string;
 };
 
@@ -150,6 +154,10 @@ function getUrlTrackingParams() {
     "utm_term",
     "utm_content",
     "gclid",
+    "gbraid",
+    "wbraid",
+    "msclkid",
+    "ttclid",
     "fbclid",
   ];
 

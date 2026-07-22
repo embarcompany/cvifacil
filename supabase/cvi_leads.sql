@@ -44,11 +44,23 @@ create table if not exists public.cvi_leads (
   utm_term text,
   utm_content text,
   gclid text,
+  fbclid text,
   gbraid text,
   wbraid text,
+  dclid text,
   msclkid text,
   ttclid text,
-  fbclid text,
+  twclid text,
+  rdt_cid text,
+  igshid text,
+  ctwa_clid text,
+  irclickid text,
+  epik text,
+  wamid text,
+  tintim_fbid text,
+  src text,
+  sck text,
+  utm_date text,
   status public.cvi_lead_status not null default 'novo',
   mensagem_enviada boolean not null default false,
   evo_message_id text,
@@ -86,11 +98,23 @@ alter table public.cvi_leads
   add column if not exists utm_term text,
   add column if not exists utm_content text,
   add column if not exists gclid text,
+  add column if not exists fbclid text,
   add column if not exists gbraid text,
   add column if not exists wbraid text,
+  add column if not exists dclid text,
   add column if not exists msclkid text,
   add column if not exists ttclid text,
-  add column if not exists fbclid text,
+  add column if not exists twclid text,
+  add column if not exists rdt_cid text,
+  add column if not exists igshid text,
+  add column if not exists ctwa_clid text,
+  add column if not exists irclickid text,
+  add column if not exists epik text,
+  add column if not exists wamid text,
+  add column if not exists tintim_fbid text,
+  add column if not exists src text,
+  add column if not exists sck text,
+  add column if not exists utm_date text,
   add column if not exists status public.cvi_lead_status not null default 'novo',
   add column if not exists mensagem_enviada boolean not null default false,
   add column if not exists evo_message_id text,
@@ -110,8 +134,13 @@ create index if not exists cvi_leads_evo_pending_idx
 create index if not exists cvi_leads_whatsapp_idx on public.cvi_leads (whatsapp);
 create index if not exists cvi_leads_whatsapp_e164_idx on public.cvi_leads (whatsapp_e164);
 create index if not exists cvi_leads_utm_campaign_idx on public.cvi_leads (utm_campaign);
+create index if not exists cvi_leads_fbclid_idx on public.cvi_leads (fbclid);
 create index if not exists cvi_leads_gbraid_idx on public.cvi_leads (gbraid);
 create index if not exists cvi_leads_wbraid_idx on public.cvi_leads (wbraid);
+create index if not exists cvi_leads_dclid_idx on public.cvi_leads (dclid);
+create index if not exists cvi_leads_msclkid_idx on public.cvi_leads (msclkid);
+create index if not exists cvi_leads_ttclid_idx on public.cvi_leads (ttclid);
+create index if not exists cvi_leads_ctwa_clid_idx on public.cvi_leads (ctwa_clid);
 
 drop view if exists public.cvi_leads_operacao;
 
@@ -142,11 +171,23 @@ select
   utm_campaign,
   utm_content,
   gclid,
+  fbclid,
   gbraid,
   wbraid,
+  dclid,
   msclkid,
   ttclid,
-  fbclid,
+  twclid,
+  rdt_cid,
+  igshid,
+  ctwa_clid,
+  irclickid,
+  epik,
+  wamid,
+  tintim_fbid,
+  src,
+  sck,
+  utm_date,
   evo_message_id,
   evo_instance,
   first_contact_at,
@@ -182,11 +223,23 @@ select
   utm_medium,
   utm_campaign,
   gclid,
+  fbclid,
   gbraid,
   wbraid,
+  dclid,
   msclkid,
   ttclid,
-  fbclid
+  twclid,
+  rdt_cid,
+  igshid,
+  ctwa_clid,
+  irclickid,
+  epik,
+  wamid,
+  tintim_fbid,
+  src,
+  sck,
+  utm_date
 from public.cvi_leads
 where status = 'novo'
   and mensagem_enviada = false

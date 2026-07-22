@@ -136,11 +136,23 @@ type LeadDatabasePayload = {
   utm_term?: string;
   utm_content?: string;
   gclid?: string;
+  fbclid?: string;
   gbraid?: string;
   wbraid?: string;
+  dclid?: string;
   msclkid?: string;
   ttclid?: string;
-  fbclid?: string;
+  twclid?: string;
+  rdt_cid?: string;
+  igshid?: string;
+  ctwa_clid?: string;
+  irclickid?: string;
+  epik?: string;
+  wamid?: string;
+  tintim_fbid?: string;
+  src?: string;
+  sck?: string;
+  utm_date?: string;
 };
 
 function getUrlTrackingParams() {
@@ -154,11 +166,23 @@ function getUrlTrackingParams() {
     "utm_term",
     "utm_content",
     "gclid",
-    "gbraid",
-    "wbraid",
-    "msclkid",
-    "ttclid",
     "fbclid",
+    "wbraid",
+    "gbraid",
+    "dclid",
+    "ttclid",
+    "twclid",
+    "rdt_cid",
+    "igshid",
+    "ctwa_clid",
+    "msclkid",
+    "irclickid",
+    "epik",
+    "wamid",
+    "tintim_fbid",
+    "src",
+    "sck",
+    "utm_date",
   ];
 
   return trackingKeys.reduce<Record<string, string>>((trackingParams, key) => {

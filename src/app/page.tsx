@@ -477,6 +477,7 @@ const phoneCountryOptions: { iso: CountryCode; label: string; dialCode: string; 
 ];
 
 const veterinaryProcedureOptions = ["Microchip", "Vacina", "Exame de Sorologia"];
+const noVeterinaryProcedureOption = "Nenhum procedimento realizado";
 
 const ddiLengthConfig: Record<string, number[]> = {
   "55": [8, 9, 10, 11],
@@ -1060,7 +1061,7 @@ export default function Home() {
     
     const emailText = formData.emailOpcional.trim() ? formData.emailOpcional : "Não informado";
     const breedText = formData.racaPet.trim() || "Não informado";
-    const proceduresText = formData.procedimentosVeterinarios.length > 0 ? formData.procedimentosVeterinarios.join(", ") : "Não informado";
+    const proceduresText = formData.procedimentosVeterinarios.length > 0 ? formData.procedimentosVeterinarios.join(", ") : "Nenhum procedimento informado";
     const text = `Olá, equipe CVI Fácil! Acabei de enviar meu formulário pelo site e quero antecipar meu atendimento por aqui.\n\n*Resumo da viagem:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Previsão da viagem: ${formData.dataViagem}\n\n*Pet(s):*\n- ${petDetails}\n- Raça: ${breedText}\n- Procedimentos veterinários: ${proceduresText}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets no total)" : "Não, apenas 1 pet"}\n\n*Dados do tutor:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}\n\nPodem me orientar com os próximos passos?`;
     const encodedText = encodeURIComponent(text);
     setTimeout(() => {
@@ -2583,7 +2584,7 @@ export default function Home() {
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Seu pet já realizou estes procedimentos?</span>
+                          <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Selecione os procedimentos que seu pet já realizou</span>
                           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                             {veterinaryProcedureOptions.map((procedure) => {
                               const isChecked = formData.procedimentosVeterinarios.includes(procedure);
@@ -2604,7 +2605,7 @@ export default function Home() {
                                     onChange={() => {
                                       const nextProcedures = isChecked
                                         ? formData.procedimentosVeterinarios.filter((item) => item !== procedure)
-                                        : [...formData.procedimentosVeterinarios, procedure];
+                                        : [...formData.procedimentosVeterinarios.filter((item) => item !== noVeterinaryProcedureOption), procedure];
                                       setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
                                       trackEvent("cvi_veterinary_procedure_changed", { procedure, selected: !isChecked });
                                     }}
@@ -2620,6 +2621,27 @@ export default function Home() {
                               );
                             })}
                           </div>
+                          <label className="flex min-h-10 w-fit cursor-pointer items-center gap-2 py-1 text-[13px] font-bold text-text-muted">
+                            <input
+                              type="checkbox"
+                              checked={formData.procedimentosVeterinarios.includes(noVeterinaryProcedureOption)}
+                              onChange={(event) => {
+                                const nextProcedures = event.target.checked ? [noVeterinaryProcedureOption] : [];
+                                setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
+                                trackEvent("cvi_veterinary_procedure_changed", {
+                                  procedure: noVeterinaryProcedureOption,
+                                  selected: event.target.checked,
+                                });
+                              }}
+                              className="sr-only"
+                            />
+                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border transition-all ${
+                              formData.procedimentosVeterinarios.includes(noVeterinaryProcedureOption) ? "border-primary bg-primary text-white" : "border-gray-300 bg-white text-transparent"
+                            }`}>
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            </span>
+                            Nenhum procedimento realizado
+                          </label>
                         </div>
                       </div>
 

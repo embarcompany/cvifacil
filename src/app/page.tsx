@@ -2815,17 +2815,20 @@ export default function Home() {
 
                       {formData.paisDestino === "Outro" && (
                         <div className="flex flex-col gap-1.5 animate-fade-in">
-                          <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Qual país?</label>
+                          <label htmlFor="destination_country_other" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Qual país?</label>
                           <div className="relative flex items-center">
                             <Globe2 className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                             <input
+                              id="destination_country_other"
+                              name="destination_country_other"
                               type="text"
                               placeholder="Digite o país de destino"
                               className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.paisDestinoOutro ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                               value={formData.paisDestinoOutro}
                               onChange={(e) => {
-                                setFormData({ ...formData, paisDestinoOutro: e.target.value });
-                                if (e.target.value.trim()) clearFieldErrors("paisDestinoOutro");
+                                const value = keepOnlyLettersAndSpaces(e.target.value);
+                                setFormData({ ...formData, paisDestinoOutro: value });
+                                if (value.trim()) clearFieldErrors("paisDestinoOutro");
                               }}
                             />
                           </div>
@@ -2924,8 +2927,9 @@ export default function Home() {
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.nomeTutor ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.nomeTutor}
                             onChange={(e) => {
-                              setFormData({ ...formData, nomeTutor: e.target.value });
-                              if (e.target.value.trim()) clearFieldErrors("nomeTutor");
+                              const value = keepOnlyLettersAndSpaces(e.target.value);
+                              setFormData({ ...formData, nomeTutor: value });
+                              if (value.trim()) clearFieldErrors("nomeTutor");
                             }}
                           />
                         </div>

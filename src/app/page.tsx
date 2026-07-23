@@ -502,6 +502,23 @@ function getPhoneOptionByIso(country: CountryCode) {
   return phoneCountryOptions.find((option) => option.iso === country) ?? phoneCountryOptions[0];
 }
 
+function inferPhoneCountryFromTypedDdi(value: string, currentCountry: CountryCode): CountryCode | null {
+  const trimmedValue = value.trim();
+  const isInternationalFormat = trimmedValue.startsWith("+") || trimmedValue.startsWith("00");
+  if (!isInternationalFormat) return null;
+
+  const digits = trimmedValue.replace(/\D/g, "").replace(/^00/, "");
+  if (!digits) return null;
+
+  const matches = phoneCountryOptions
+    .filter((option) => digits.startsWith(option.dialCode.replace(/\D/g, "")))
+    .sort((a, b) => b.dialCode.length - a.dialCode.length);
+
+  if (!matches.length) return null;
+
+  return matches.find((option) => option.iso === currentCountry)?.iso ?? matches[0].iso;
+}
+
 function inferPhoneCountryByTimezone(): CountryCode | null {
   try {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
@@ -2529,9 +2546,9 @@ export default function Home() {
                         {errors.tipoPet && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.tipoPet}</span>}
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
+                      <div className="flex flex-col gap-5">
                         <div className="flex flex-col gap-1.5">
-                          <label htmlFor="pet_breed" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Raça do pet</label>
+                          <label htmlFor="pet_breed" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Seu pet tem raça?</label>
                           <div className="relative flex items-center">
                             <HeartHandshake className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                             <input
@@ -2540,16 +2557,34 @@ export default function Home() {
                               type="text"
                               placeholder="Ex: Golden, SRD, Persa"
                               autoComplete="off"
-                              className="pl-12 w-full h-[60px] px-4 rounded-xl border border-gray-200 bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary"
+                              disabled={formData.racaPet === "Sem raça definida"}
+                              className="pl-12 w-full h-[60px] px-4 rounded-xl border border-gray-200 bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-text-muted"
                               value={formData.racaPet}
                               onChange={(e) => setFormData({ ...formData, racaPet: e.target.value })}
                             />
                           </div>
+                          <label className="flex min-h-10 w-fit cursor-pointer items-center gap-2 py-1 text-[13px] font-bold text-text-muted">
+                            <input
+                              type="checkbox"
+                              checked={formData.racaPet === "Sem raça definida"}
+                              onChange={(event) => setFormData({
+                                ...formData,
+                                racaPet: event.target.checked ? "Sem raça definida" : "",
+                              })}
+                              className="sr-only"
+                            />
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
+                              formData.racaPet === "Sem raça definida" ? "border-primary bg-primary text-white" : "border-gray-300 bg-white text-transparent"
+                            }`}>
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            </span>
+                            Não tem raça definida
+                          </label>
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Procedimentos veterinários</span>
-                          <div className="grid min-h-[60px] grid-cols-1 gap-2 sm:grid-cols-3">
+                          <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Seu pet já realizou estes procedimentos?</span>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                             {veterinaryProcedureOptions.map((procedure) => {
                               const isChecked = formData.procedimentosVeterinarios.includes(procedure);
                               return (
@@ -2873,8 +2908,9 @@ export default function Home() {
                             className={`pl-[132px] w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOuTelefone}
                             onChange={(e) => {
-                              setFormData({ ...formData, emailOuTelefone: e.target.value });
-                              if (normalizePhone(e.target.value, formData.phoneCountry)) clearFieldErrors("emailOuTelefone");
+                              const nextPhoneCountry = inferPhoneCountryFromTypedDdi(e.target.value, formData.phoneCountry) ?? formData.phoneCountry;
+                              setFormData({ ...formData, emailOuTelefone: e.target.value, phoneCountry: nextPhoneCountry });
+                              if (normalizePhone(e.target.value, nextPhoneCountry)) clearFieldErrors("emailOuTelefone");
                             }}
                           />
                           {isPhoneCountryOpen && (

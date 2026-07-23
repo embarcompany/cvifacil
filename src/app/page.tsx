@@ -2282,7 +2282,7 @@ export default function Home() {
               </div>
 
               <h2 className="text-[29px] sm:text-[38px] lg:text-[54px] font-[850] leading-[1.12] lg:leading-[1.05] tracking-tight lg:tracking-[-0.03em] text-white max-w-[500px] mb-4 font-sans">
-                Comece a emissão do seu CVI em <span className="text-sky-300 font-black block sm:inline">2 passos</span>
+                Comece a emissão do seu CVI em <span className="text-sky-300 font-black block sm:inline">3 passos</span>
               </h2>
               <p className="text-[15.5px] sm:text-[16px] text-blue-50 leading-[1.65] mb-6 md:mb-8 max-w-[440px]">
                 Preencha as primeiras informações do seu pet e tutor. Nosso time de especialistas continua o processo rapidamente para você.

@@ -36,8 +36,12 @@ create table if not exists public.cvi_leads (
   pet_summary text,
   mais_de_um_pet boolean not null default false,
   tipo_pet text,
+  raca_pet text,
+  procedimentos_veterinarios text[] not null default '{}',
+  procedimentos_veterinarios_texto text,
   page_url text,
   user_agent text,
+  tracking_params jsonb,
   utm_source text,
   utm_medium text,
   utm_campaign text,
@@ -61,6 +65,8 @@ create table if not exists public.cvi_leads (
   src text,
   sck text,
   utm_date text,
+  tt_lead_id text,
+  tt_session_id text,
   status public.cvi_lead_status not null default 'novo',
   mensagem_enviada boolean not null default false,
   evo_message_id text,
@@ -90,8 +96,12 @@ alter table public.cvi_leads
   add column if not exists pet_summary text,
   add column if not exists mais_de_um_pet boolean not null default false,
   add column if not exists tipo_pet text,
+  add column if not exists raca_pet text,
+  add column if not exists procedimentos_veterinarios text[] not null default '{}',
+  add column if not exists procedimentos_veterinarios_texto text,
   add column if not exists page_url text,
   add column if not exists user_agent text,
+  add column if not exists tracking_params jsonb,
   add column if not exists utm_source text,
   add column if not exists utm_medium text,
   add column if not exists utm_campaign text,
@@ -115,6 +125,8 @@ alter table public.cvi_leads
   add column if not exists src text,
   add column if not exists sck text,
   add column if not exists utm_date text,
+  add column if not exists tt_lead_id text,
+  add column if not exists tt_session_id text,
   add column if not exists status public.cvi_lead_status not null default 'novo',
   add column if not exists mensagem_enviada boolean not null default false,
   add column if not exists evo_message_id text,
@@ -141,6 +153,8 @@ create index if not exists cvi_leads_dclid_idx on public.cvi_leads (dclid);
 create index if not exists cvi_leads_msclkid_idx on public.cvi_leads (msclkid);
 create index if not exists cvi_leads_ttclid_idx on public.cvi_leads (ttclid);
 create index if not exists cvi_leads_ctwa_clid_idx on public.cvi_leads (ctwa_clid);
+create index if not exists cvi_leads_tt_lead_id_idx on public.cvi_leads (tt_lead_id);
+create index if not exists cvi_leads_tracking_params_gin_idx on public.cvi_leads using gin (tracking_params);
 
 drop view if exists public.cvi_leads_operacao;
 
@@ -166,6 +180,10 @@ select
   data_viagem,
   pet_summary,
   total_pets,
+  raca_pet,
+  procedimentos_veterinarios,
+  procedimentos_veterinarios_texto,
+  tracking_params,
   utm_source,
   utm_medium,
   utm_campaign,
@@ -188,6 +206,8 @@ select
   src,
   sck,
   utm_date,
+  tt_lead_id,
+  tt_session_id,
   evo_message_id,
   evo_instance,
   first_contact_at,
@@ -219,6 +239,10 @@ select
   data_viagem,
   pet_summary,
   total_pets,
+  raca_pet,
+  procedimentos_veterinarios,
+  procedimentos_veterinarios_texto,
+  tracking_params,
   utm_source,
   utm_medium,
   utm_campaign,
@@ -239,7 +263,9 @@ select
   tintim_fbid,
   src,
   sck,
-  utm_date
+  utm_date,
+  tt_lead_id,
+  tt_session_id
 from public.cvi_leads
 where status = 'novo'
   and mensagem_enviada = false

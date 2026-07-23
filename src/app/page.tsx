@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { 
   ShieldCheck, 
   CheckCircle2, 
@@ -31,7 +31,6 @@ import {
   Check,
   UserCheck,
   User,
-  Phone,
   HelpCircle,
   Info,
   Menu,
@@ -46,7 +45,10 @@ import {
 interface FormData {
   nomeTutor: string;
   emailOuTelefone: string;
+  phoneCountry: CountryCode;
   tipoPet: "Cão" | "Gato" | "";
+  racaPet: string;
+  procedimentosVeterinarios: string[];
   paisDestino: string;
   paisDestinoOutro: string;
   dataViagem: string;
@@ -61,6 +63,8 @@ interface FormData {
 interface FormErrors {
   nomeTutor?: string;
   emailOuTelefone?: string;
+  racaPet?: string;
+  procedimentosVeterinarios?: string;
   paisDestino?: string;
   paisDestinoOutro?: string;
   dataViagem?: string;
@@ -89,7 +93,10 @@ const formCookieName = "cvi_facil_form_state";
 const defaultFormData: FormData = {
   nomeTutor: "",
   emailOuTelefone: "",
+  phoneCountry: "BR",
   tipoPet: "",
+  racaPet: "",
+  procedimentosVeterinarios: [],
   paisDestino: "",
   paisDestinoOutro: "",
   dataViagem: "",
@@ -128,8 +135,12 @@ type LeadDatabasePayload = {
   pet_summary: string;
   mais_de_um_pet: boolean;
   tipo_pet: string;
+  raca_pet: string | null;
+  procedimentos_veterinarios: string[];
+  procedimentos_veterinarios_texto: string | null;
   page_url: string | null;
   user_agent: string | null;
+  tracking_params?: Record<string, string>;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -153,43 +164,172 @@ type LeadDatabasePayload = {
   src?: string;
   sck?: string;
   utm_date?: string;
+  tt_lead_id?: string;
+  tt_session_id?: string;
 };
+
+const trackingParamKeys = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "gclid",
+  "fbclid",
+  "wbraid",
+  "gbraid",
+  "dclid",
+  "ttclid",
+  "twclid",
+  "rdt_cid",
+  "igshid",
+  "ctwa_clid",
+  "msclkid",
+  "irclickid",
+  "epik",
+  "wamid",
+  "tintim_fbid",
+  "src",
+  "sck",
+  "utm_date",
+  "tt_lead_id",
+  "tt_session_id",
+] as const;
+
+const trackingStorageKeys = [
+  "cvi_facil_tracking_params",
+  "cvi_tracking_params",
+  "tracking_params",
+  "utm_params",
+] as const;
+
+function collectUrlParams() {
+  if (typeof window === "undefined") return {};
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlParams: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    if (value) urlParams[key] = value;
+  });
+  return urlParams;
+}
+
+function getCookieValue(name: string) {
+  if (typeof document === "undefined") return null;
+
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  if (!cookie) return null;
+
+  return decodeURIComponent(cookie.split("=").slice(1).join("="));
+}
+
+function pickTrackingParams(source: Record<string, unknown> | null) {
+  if (!source) return {};
+
+  return trackingParamKeys.reduce<Record<string, string>>((trackingParams, key) => {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) trackingParams[key] = value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) trackingParams[key] = String(value);
+    return trackingParams;
+  }, {});
+}
+
+function parseStoredTrackingValue(value: string | null) {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function readTrackingParamsFromCookie() {
+  const directTracking = trackingParamKeys.reduce<Record<string, string>>((trackingParams, key) => {
+    const value = getCookieValue(key);
+    if (value) trackingParams[key] = value;
+    return trackingParams;
+  }, {});
+
+  const storedTracking = trackingStorageKeys.reduce<Record<string, string>>((trackingParams, key) => {
+    return { ...trackingParams, ...pickTrackingParams(parseStoredTrackingValue(getCookieValue(key))) };
+  }, {});
+
+  return { ...storedTracking, ...directTracking };
+}
+
+function readTrackingParamsFromStorage(storage: Storage | undefined) {
+  if (!storage) return {};
+
+  try {
+    const directTracking = trackingParamKeys.reduce<Record<string, string>>((trackingParams, key) => {
+      const value = storage.getItem(key);
+      if (value) trackingParams[key] = value;
+      return trackingParams;
+    }, {});
+
+    const storedTracking = trackingStorageKeys.reduce<Record<string, string>>((trackingParams, key) => {
+      return { ...trackingParams, ...pickTrackingParams(parseStoredTrackingValue(storage.getItem(key))) };
+    }, {});
+
+    return { ...storedTracking, ...directTracking };
+  } catch {
+    return {};
+  }
+}
+
+function persistTrackingParams(params: Record<string, string>) {
+  if (typeof window === "undefined" || Object.keys(params).length === 0) return;
+
+  const serialized = JSON.stringify(params);
+  document.cookie = `cvi_facil_tracking_params=${encodeURIComponent(serialized)}; path=/; max-age=${60 * 60 * 24 * 90}; SameSite=Lax`;
+
+  try {
+    window.localStorage.setItem("cvi_facil_tracking_params", serialized);
+    window.sessionStorage.setItem("cvi_facil_tracking_params", serialized);
+    Object.entries(params).forEach(([key, value]) => {
+      window.localStorage.setItem(key, value);
+      window.sessionStorage.setItem(key, value);
+    });
+  } catch {
+    // Storage can be blocked by privacy settings; cookie/raw payload still cover the lead.
+  }
+}
 
 function getUrlTrackingParams() {
   if (typeof window === "undefined") return {};
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const trackingKeys = [
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
-    "gclid",
-    "fbclid",
-    "wbraid",
-    "gbraid",
-    "dclid",
-    "ttclid",
-    "twclid",
-    "rdt_cid",
-    "igshid",
-    "ctwa_clid",
-    "msclkid",
-    "irclickid",
-    "epik",
-    "wamid",
-    "tintim_fbid",
-    "src",
-    "sck",
-    "utm_date",
-  ];
+  const urlParams = collectUrlParams();
+  const currentTrackingParams = pickTrackingParams(urlParams);
+  const sessionTrackingParams = readTrackingParamsFromStorage(window.sessionStorage);
+  const localTrackingParams = readTrackingParamsFromStorage(window.localStorage);
+  const cookieTrackingParams = readTrackingParamsFromCookie();
+  const prioritizedKnownParams = {
+    ...currentTrackingParams,
+    ...sessionTrackingParams,
+    ...localTrackingParams,
+    ...cookieTrackingParams,
+  };
+  persistTrackingParams(prioritizedKnownParams);
 
-  return trackingKeys.reduce<Record<string, string>>((trackingParams, key) => {
-    const value = searchParams.get(key);
-    if (value) trackingParams[key] = value;
-    return trackingParams;
-  }, {});
+  return {
+    ...prioritizedKnownParams,
+    tracking_params: {
+      ...urlParams,
+      ...currentTrackingParams,
+      ...sessionTrackingParams,
+      ...localTrackingParams,
+      ...cookieTrackingParams,
+    },
+  };
 }
 
 function readPersistedFormState(): PersistedFormState | null {
@@ -229,13 +369,16 @@ function createLeadId() {
   });
 }
 
-function normalizePhone(value: string): NormalizedPhone | null {
+function normalizePhone(value: string, defaultCountry: CountryCode = "BR"): NormalizedPhone | null {
   const rawValue = value.trim();
   if (!rawValue || rawValue.includes("@")) return null;
 
-  const phone = rawValue.startsWith("+")
-    ? parsePhoneNumberFromString(rawValue)
-    : parsePhoneNumberFromString(rawValue, "BR");
+  const normalizedDigits = normalizePhoneNumberDigits(rawValue, defaultCountry);
+  const phone = normalizedDigits
+    ? parsePhoneNumberFromString(`+${normalizedDigits}`)
+    : rawValue.startsWith("+")
+      ? parsePhoneNumberFromString(rawValue)
+      : parsePhoneNumberFromString(rawValue, defaultCountry);
 
   if (!phone || !phone.isPossible()) return null;
 
@@ -312,8 +455,159 @@ const destinationOptions = [
   { value: "Outro", label: "Outro país", flagCode: "other", hint: "Avaliamos o destino com você" },
 ];
 
+const phoneCountryOptions: { iso: CountryCode; label: string; dialCode: string; flagCode: string }[] = [
+  { iso: "BR", label: "Brasil", dialCode: "+55", flagCode: "br" },
+  { iso: "PT", label: "Portugal", dialCode: "+351", flagCode: "pt" },
+  { iso: "US", label: "Estados Unidos", dialCode: "+1", flagCode: "us" },
+  { iso: "CA", label: "Canadá", dialCode: "+1", flagCode: "ca" },
+  { iso: "GB", label: "Reino Unido", dialCode: "+44", flagCode: "uk" },
+  { iso: "CO", label: "Colômbia", dialCode: "+57", flagCode: "co" },
+  { iso: "ES", label: "Espanha", dialCode: "+34", flagCode: "es" },
+  { iso: "IT", label: "Itália", dialCode: "+39", flagCode: "it" },
+  { iso: "FR", label: "França", dialCode: "+33", flagCode: "fr" },
+  { iso: "DE", label: "Alemanha", dialCode: "+49", flagCode: "de" },
+  { iso: "AR", label: "Argentina", dialCode: "+54", flagCode: "ar" },
+  { iso: "UY", label: "Uruguai", dialCode: "+598", flagCode: "uy" },
+  { iso: "PY", label: "Paraguai", dialCode: "+595", flagCode: "py" },
+  { iso: "PE", label: "Peru", dialCode: "+51", flagCode: "pe" },
+  { iso: "MX", label: "México", dialCode: "+52", flagCode: "mx" },
+  { iso: "CL", label: "Chile", dialCode: "+56", flagCode: "cl" },
+  { iso: "AU", label: "Austrália", dialCode: "+61", flagCode: "au" },
+  { iso: "JP", label: "Japão", dialCode: "+81", flagCode: "jp" },
+];
+
+const veterinaryProcedureOptions = ["Microchip", "Vacina", "Exame de Sorologia"];
+
+const ddiLengthConfig: Record<string, number[]> = {
+  "55": [8, 9, 10, 11],
+  "1": [10],
+  "351": [9],
+  "44": [10],
+  "52": [10],
+  "57": [10],
+  "34": [9],
+  "33": [9],
+  "49": [10, 11, 12],
+  "39": [10],
+  "54": [10],
+  "56": [9],
+  "51": [9],
+  "595": [9],
+  "598": [8, 9],
+  "61": [9],
+  "81": [10],
+};
+
+function getPhoneOptionByIso(country: CountryCode) {
+  return phoneCountryOptions.find((option) => option.iso === country) ?? phoneCountryOptions[0];
+}
+
+function inferPhoneCountryByTimezone(): CountryCode | null {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    const language = (navigator.language || "").toLowerCase();
+
+    if (
+      timeZone.startsWith("America/Sao_Paulo") ||
+      timeZone.startsWith("America/Bahia") ||
+      timeZone.startsWith("America/Fortaleza") ||
+      timeZone.startsWith("America/Maceio") ||
+      timeZone.startsWith("America/Recife") ||
+      timeZone.startsWith("America/Belem") ||
+      timeZone.startsWith("America/Manaus") ||
+      timeZone.startsWith("America/Cuiaba") ||
+      timeZone.startsWith("America/Campo_Grande") ||
+      timeZone.startsWith("America/Rio_Branco") ||
+      timeZone.startsWith("America/Santarem") ||
+      timeZone.startsWith("America/Boa_Vista") ||
+      timeZone.startsWith("America/Araguaina") ||
+      timeZone.startsWith("America/Porto_Velho")
+    ) return "BR";
+
+    if (timeZone.startsWith("Europe/Lisbon") || timeZone.startsWith("Atlantic/Madeira") || timeZone.startsWith("Atlantic/Azores")) return "PT";
+    if (timeZone.startsWith("America/Mexico_City") || timeZone.startsWith("America/Cancun") || timeZone.startsWith("America/Monterrey")) return "MX";
+    if (timeZone.startsWith("America/Bogota")) return "CO";
+    if (timeZone.startsWith("America/New_York") || timeZone.startsWith("America/Chicago") || timeZone.startsWith("America/Los_Angeles") || timeZone.startsWith("America/Denver")) return "US";
+    if (timeZone.startsWith("America/Toronto") || timeZone.startsWith("America/Vancouver")) return "CA";
+    if (timeZone.startsWith("Europe/London")) return "GB";
+    if (timeZone.startsWith("Europe/Madrid")) return "ES";
+    if (timeZone.startsWith("Europe/Rome")) return "IT";
+    if (timeZone.startsWith("Europe/Paris")) return "FR";
+    if (timeZone.startsWith("Europe/Berlin")) return "DE";
+    if (timeZone.startsWith("America/Argentina") || timeZone.startsWith("America/Buenos_Aires")) return "AR";
+    if (timeZone.startsWith("America/Montevideo")) return "UY";
+    if (timeZone.startsWith("America/Asuncion")) return "PY";
+    if (timeZone.startsWith("America/Lima")) return "PE";
+    if (timeZone.startsWith("America/Santiago")) return "CL";
+    if (timeZone.startsWith("Australia/")) return "AU";
+    if (timeZone.startsWith("Asia/Tokyo")) return "JP";
+
+    if (language.includes("pt-br")) return "BR";
+    if (language.includes("pt-pt")) return "PT";
+    if (language.includes("es-mx")) return "MX";
+    if (language.includes("es-co")) return "CO";
+    if (language.includes("en-us")) return "US";
+    if (language.includes("en-ca")) return "CA";
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function detectDefaultPhoneCountry(): CountryCode {
+  if (typeof navigator === "undefined") return "BR";
+
+  const language = navigator.language || "";
+  const countryFromLocale = language.includes("-") ? language.split("-").pop()?.toUpperCase() : "";
+  const localeMatch = phoneCountryOptions.find((option) => option.iso === countryFromLocale);
+  if (localeMatch) return localeMatch.iso;
+
+  return inferPhoneCountryByTimezone() ?? "BR";
+}
+
+function normalizePhoneNumberDigits(rawPhone: string, manualCountry: CountryCode) {
+  if (!rawPhone) return "";
+
+  const digits = rawPhone.replace(/\D/g, "");
+  const hasPlus = rawPhone.trim().startsWith("+");
+  if (digits.length < 8) return "";
+  if (hasPlus) return digits;
+
+  const selectedOption = getPhoneOptionByIso(manualCountry);
+  const baseCountryCode = selectedOption.dialCode.replace(/\D/g, "");
+  const localDigits = digits.startsWith("0") ? digits.slice(1) : digits;
+  const language = typeof navigator !== "undefined" ? (navigator.language || "").toLowerCase() : "";
+  const isLikelyBrRoaming = baseCountryCode === "1" && localDigits.length === 11 && (language.includes("pt") || language.includes("br"));
+  const effectiveBase = isLikelyBrRoaming ? "55" : baseCountryCode;
+  const effectiveConfig = ddiLengthConfig[effectiveBase];
+
+  if (effectiveConfig?.includes(localDigits.length)) {
+    return `${effectiveBase}${localDigits}`;
+  }
+
+  for (const ddi of Object.keys(ddiLengthConfig).sort((a, b) => b.length - a.length)) {
+    if (!digits.startsWith(ddi)) continue;
+    const localPart = digits.slice(ddi.length);
+    if (ddiLengthConfig[ddi]?.includes(localPart.length)) return digits;
+  }
+
+  return digits;
+}
+
 function DestinationFlag({ code }: { code: string }) {
   const className = "h-5 w-7 overflow-hidden rounded-[4px] border border-black/10 shadow-sm";
+
+  if (code === "br") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#009b3a" />
+        <path d="M14 3 25 10 14 17 3 10 14 3Z" fill="#ffdf00" />
+        <circle cx="14" cy="10" r="4.1" fill="#002776" />
+        <path d="M10.2 8.7c2.5-.4 5.3.1 7.6 1.5" stroke="#fff" strokeWidth="0.8" fill="none" />
+      </svg>
+    );
+  }
 
   if (code === "us") {
     return (
@@ -382,6 +676,139 @@ function DestinationFlag({ code }: { code: string }) {
         <rect width="6.5" height="20" fill="#d52b1e" />
         <rect x="21.5" width="6.5" height="20" fill="#d52b1e" />
         <path d="M14 4.2 15.1 7l2.4-1.2-.9 2.8 2.7.8-2.7 1 1.1 2.6-2.4-1.3L14 16l-1.3-4.3-2.4 1.3 1.1-2.6-2.7-1 2.7-.8-.9-2.8L12.9 7 14 4.2Z" fill="#d52b1e" />
+      </svg>
+    );
+  }
+
+  if (code === "es") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#aa151b" />
+        <rect y="5" width="28" height="10" fill="#f1bf00" />
+        <rect x="7" y="7.2" width="2.8" height="5.6" fill="#aa151b" />
+      </svg>
+    );
+  }
+
+  if (code === "it") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="9.33" height="20" fill="#009246" />
+        <rect x="9.33" width="9.34" height="20" fill="#fff" />
+        <rect x="18.67" width="9.33" height="20" fill="#ce2b37" />
+      </svg>
+    );
+  }
+
+  if (code === "fr") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="9.33" height="20" fill="#0055a4" />
+        <rect x="9.33" width="9.34" height="20" fill="#fff" />
+        <rect x="18.67" width="9.33" height="20" fill="#ef4135" />
+      </svg>
+    );
+  }
+
+  if (code === "de") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="6.67" fill="#000" />
+        <rect y="6.67" width="28" height="6.66" fill="#dd0000" />
+        <rect y="13.33" width="28" height="6.67" fill="#ffce00" />
+      </svg>
+    );
+  }
+
+  if (code === "ar") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#74acdf" />
+        <rect y="6.67" width="28" height="6.66" fill="#fff" />
+        <circle cx="14" cy="10" r="1.7" fill="#f6b40e" />
+      </svg>
+    );
+  }
+
+  if (code === "uy") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#fff" />
+        {[2.2, 6.6, 11, 15.4].map((y) => <rect key={y} y={y} width="28" height="2.2" fill="#0038a8" />)}
+        <rect width="9" height="9" fill="#fff" />
+        <circle cx="4.5" cy="4.5" r="2" fill="#fcd116" />
+      </svg>
+    );
+  }
+
+  if (code === "py") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="6.67" fill="#d52b1e" />
+        <rect y="6.67" width="28" height="6.66" fill="#fff" />
+        <rect y="13.33" width="28" height="6.67" fill="#0038a8" />
+      </svg>
+    );
+  }
+
+  if (code === "co") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="10" fill="#fcd116" />
+        <rect y="10" width="28" height="5" fill="#003893" />
+        <rect y="15" width="28" height="5" fill="#ce1126" />
+      </svg>
+    );
+  }
+
+  if (code === "pe") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="9.33" height="20" fill="#d91023" />
+        <rect x="9.33" width="9.34" height="20" fill="#fff" />
+        <rect x="18.67" width="9.33" height="20" fill="#d91023" />
+      </svg>
+    );
+  }
+
+  if (code === "mx") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="9.33" height="20" fill="#006847" />
+        <rect x="9.33" width="9.34" height="20" fill="#fff" />
+        <rect x="18.67" width="9.33" height="20" fill="#ce1126" />
+        <circle cx="14" cy="10" r="1.5" fill="#c09300" />
+      </svg>
+    );
+  }
+
+  if (code === "cl") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="10" fill="#fff" />
+        <rect y="10" width="28" height="10" fill="#d52b1e" />
+        <rect width="10" height="10" fill="#0039a6" />
+        <path d="M5 2.4 5.7 4.3h2L6.1 5.5l.6 1.9L5 6.2 3.3 7.4l.6-1.9L2.3 4.3h2L5 2.4Z" fill="#fff" />
+      </svg>
+    );
+  }
+
+  if (code === "au") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#012169" />
+        <path d="M20 5.5 20.6 7h1.6l-1.3 1 .5 1.5L20 8.6l-1.4.9.5-1.5-1.3-1h1.6L20 5.5Z" fill="#fff" />
+        <path d="M6 3v8M2 7h8" stroke="#fff" strokeWidth="2.5" />
+        <path d="M6 3v8M2 7h8" stroke="#c8102e" strokeWidth="1.2" />
+      </svg>
+    );
+  }
+
+  if (code === "jp") {
+    return (
+      <svg className={className} viewBox="0 0 28 20" aria-hidden="true">
+        <rect width="28" height="20" fill="#fff" />
+        <circle cx="14" cy="10" r="4.3" fill="#bc002d" />
       </svg>
     );
   }
@@ -542,7 +969,7 @@ export default function Home() {
     const leadId = createLeadId();
     const tutorName = formData.nomeTutor.trim();
     const tutorPhone = formData.emailOuTelefone.trim();
-    const normalizedTutorPhone = normalizePhone(tutorPhone);
+    const normalizedTutorPhone = normalizePhone(tutorPhone, formData.phoneCountry);
     const tutorPhoneDigits = normalizedTutorPhone?.digits || tutorPhone.replace(/\D/g, "");
     const tutorPhoneE164 = normalizedTutorPhone?.e164 || "";
     const tutorEmail = formData.emailOpcional.trim();
@@ -567,6 +994,9 @@ export default function Home() {
       pet_summary: petDetails,
       mais_de_um_pet: totalPets > 1,
       tipo_pet: formData.tipoPet || petDetails,
+      raca_pet: formData.racaPet.trim() || null,
+      procedimentos_veterinarios: formData.procedimentosVeterinarios,
+      procedimentos_veterinarios_texto: formData.procedimentosVeterinarios.length > 0 ? formData.procedimentosVeterinarios.join(", ") : null,
       page_url: typeof window !== "undefined" ? window.location.href : null,
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       ...getUrlTrackingParams(),
@@ -591,6 +1021,8 @@ export default function Home() {
       tutor_phone_country: normalizedTutorPhone?.country || null,
       tutor_phone_country_code: normalizedTutorPhone?.countryCallingCode || null,
       tutor_email: tutorEmail,
+      pet_breed: formData.racaPet.trim() || null,
+      veterinary_procedures: formData.procedimentosVeterinarios,
     });
 
     try {
@@ -610,7 +1042,9 @@ export default function Home() {
     }
     
     const emailText = formData.emailOpcional.trim() ? formData.emailOpcional : "Não informado";
-    const text = `Olá, equipe CVI Fácil! Acabei de enviar meu formulário pelo site e quero antecipar meu atendimento por aqui.\n\n*Resumo da viagem:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Previsão da viagem: ${formData.dataViagem}\n\n*Pet(s):*\n- ${petDetails}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets no total)" : "Não, apenas 1 pet"}\n\n*Dados do tutor:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}\n\nPodem me orientar com os próximos passos?`;
+    const breedText = formData.racaPet.trim() || "Não informado";
+    const proceduresText = formData.procedimentosVeterinarios.length > 0 ? formData.procedimentosVeterinarios.join(", ") : "Não informado";
+    const text = `Olá, equipe CVI Fácil! Acabei de enviar meu formulário pelo site e quero antecipar meu atendimento por aqui.\n\n*Resumo da viagem:*\n- Origem: ${formData.cidadeOrigem}\n- Destino: ${destinoFinal}\n- Previsão da viagem: ${formData.dataViagem}\n\n*Pet(s):*\n- ${petDetails}\n- Raça: ${breedText}\n- Procedimentos veterinários: ${proceduresText}\n- Mais de um pet: ${totalPets > 1 ? "Sim (" + totalPets + " pets no total)" : "Não, apenas 1 pet"}\n\n*Dados do tutor:*\n- Nome: ${formData.nomeTutor}\n- WhatsApp: ${formData.emailOuTelefone}\n- E-mail: ${emailText}\n\nPodem me orientar com os próximos passos?`;
     const encodedText = encodeURIComponent(text);
     setTimeout(() => {
       setSubmittedWhatsAppUrl(`https://wa.me/${whatsappNumber}?text=${encodedText}`);
@@ -758,8 +1192,10 @@ export default function Home() {
   const [showMultiPetInfo, setShowMultiPetInfo] = useState(false);
   const [showQuantityCounters, setShowQuantityCounters] = useState(false);
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
+  const [isPhoneCountryOpen, setIsPhoneCountryOpen] = useState(false);
   const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState("");
   const destinationDropdownRef = useRef<HTMLDivElement>(null);
+  const phoneCountryDropdownRef = useRef<HTMLDivElement>(null);
   const formAbandonmentTrackedRef = useRef(false);
 
   useEffect(() => {
@@ -769,7 +1205,7 @@ export default function Home() {
       if (!isActive) return;
 
       const persistedState = readPersistedFormState();
-      const persistedFormData = { ...defaultFormData, ...persistedState?.formData };
+      const persistedFormData = { ...defaultFormData, phoneCountry: detectDefaultPhoneCountry(), ...persistedState?.formData };
       const persistedStep = persistedState?.formStep;
 
       setFormData(persistedFormData);
@@ -789,6 +1225,8 @@ export default function Home() {
     const destination = formData.paisDestino === "Outro" ? formData.paisDestinoOutro.trim() : formData.paisDestino;
     const filledFields = [
       petCount > 0,
+      Boolean(formData.racaPet.trim()),
+      formData.procedimentosVeterinarios.length > 0,
       Boolean(formData.cidadeOrigem.trim()),
       Boolean(destination),
       Boolean(formData.dataViagem),
@@ -809,6 +1247,8 @@ export default function Home() {
       pet_count: petCount,
       dog_count: formData.qtdCachorros,
       cat_count: formData.qtdGatos,
+      pet_breed: formData.racaPet.trim() || null,
+      veterinary_procedures: formData.procedimentosVeterinarios,
       has_whatsapp: Boolean(formData.emailOuTelefone.trim()),
       has_optional_email: Boolean(formData.emailOpcional.trim()),
       filled_fields_count: filledFields,
@@ -917,6 +1357,12 @@ export default function Home() {
       ) {
         setIsDestinationOpen(false);
       }
+      if (
+        phoneCountryDropdownRef.current &&
+        !phoneCountryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsPhoneCountryOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -988,8 +1434,8 @@ export default function Home() {
       newErrors.emailOuTelefone = "Por favor, informe seu WhatsApp";
     } else if (contact.includes("@")) {
       newErrors.emailOuTelefone = "Por favor, informe apenas seu WhatsApp (e-mail não aceito)";
-    } else if (!normalizePhone(contact)) {
-      newErrors.emailOuTelefone = "Informe um WhatsApp válido. Para números fora do Brasil, inclua o DDI. Ex: +351 912 345 678";
+    } else if (!normalizePhone(contact, formData.phoneCountry)) {
+      newErrors.emailOuTelefone = "Informe um WhatsApp válido. Se for outro país, selecione o DDI correto.";
     }
     if (formData.emailOpcional.trim()) {
       const emailRegex = /^\S+@\S+\.\S+$/;
@@ -1140,6 +1586,8 @@ export default function Home() {
       },
     ],
   };
+
+  const selectedPhoneCountry = getPhoneOptionByIso(formData.phoneCountry);
 
   return (
     <>
@@ -2081,6 +2529,60 @@ export default function Home() {
                         {errors.tipoPet && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.tipoPet}</span>}
                       </div>
 
+                      <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
+                        <div className="flex flex-col gap-1.5">
+                          <label htmlFor="pet_breed" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Raça do pet</label>
+                          <div className="relative flex items-center">
+                            <HeartHandshake className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
+                            <input
+                              id="pet_breed"
+                              name="pet_breed"
+                              type="text"
+                              placeholder="Ex: Golden, SRD, Persa"
+                              autoComplete="off"
+                              className="pl-12 w-full h-[60px] px-4 rounded-xl border border-gray-200 bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary"
+                              value={formData.racaPet}
+                              onChange={(e) => setFormData({ ...formData, racaPet: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Procedimentos veterinários</span>
+                          <div className="grid min-h-[60px] grid-cols-1 gap-2 sm:grid-cols-3">
+                            {veterinaryProcedureOptions.map((procedure) => {
+                              const isChecked = formData.procedimentosVeterinarios.includes(procedure);
+                              return (
+                                <label
+                                  key={procedure}
+                                  className={`flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13px] font-extrabold transition-all duration-200 ${
+                                    isChecked
+                                      ? "border-primary bg-blue-soft text-primary"
+                                      : "border-gray-200 bg-white text-text-muted hover:border-primary/40 hover:bg-blue-soft/40"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    name="veterinary_procedures"
+                                    value={procedure}
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      const nextProcedures = isChecked
+                                        ? formData.procedimentosVeterinarios.filter((item) => item !== procedure)
+                                        : [...formData.procedimentosVeterinarios, procedure];
+                                      setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
+                                      trackEvent("cvi_veterinary_procedure_changed", { procedure, selected: !isChecked });
+                                    }}
+                                    className="h-4 w-4 accent-primary"
+                                  />
+                                  <span className="leading-tight">{procedure}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* 2. Cidade de Origem */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Cidade de origem</label>
@@ -2304,21 +2806,70 @@ export default function Home() {
                       {/* WhatsApp with Phone icon */}
                       <div className="flex flex-col gap-1.5">
                         <label htmlFor="tutor_phone" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">WhatsApp</label>
-                        <div className="relative flex items-center">
-                          <Phone className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
+                        <div className="relative flex items-center" ref={phoneCountryDropdownRef}>
+                          <button
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded={isPhoneCountryOpen}
+                            onClick={() => setIsPhoneCountryOpen((open) => !open)}
+                            className={`absolute left-2 z-10 flex h-11 items-center gap-1.5 rounded-lg border px-2 text-[12px] font-black transition-all duration-200 ${
+                              errors.emailOuTelefone
+                                ? "border-red-200 bg-red-50 text-red-700"
+                                : "border-gray-100 bg-blue-soft/45 text-navy hover:border-primary/30 hover:bg-blue-soft"
+                            }`}
+                          >
+                            <DestinationFlag code={selectedPhoneCountry.flagCode} />
+                            <span>{selectedPhoneCountry.dialCode}</span>
+                            <ChevronDown className={`h-3.5 w-3.5 text-primary transition-transform duration-200 ${isPhoneCountryOpen ? "rotate-180" : ""}`} />
+                          </button>
                           <input 
                             id="tutor_phone"
                             name="tutor_phone"
                             type="text"
-                            placeholder="Ex: +55 11 94245-2218"
+                            placeholder="11 94245-2218"
                             autoComplete="tel"
-                            className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
+                            className={`pl-[132px] w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.emailOuTelefone ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.emailOuTelefone}
                             onChange={(e) => {
                               setFormData({ ...formData, emailOuTelefone: e.target.value });
-                              if (normalizePhone(e.target.value)) clearFieldErrors("emailOuTelefone");
+                              if (normalizePhone(e.target.value, formData.phoneCountry)) clearFieldErrors("emailOuTelefone");
                             }}
                           />
+                          {isPhoneCountryOpen && (
+                            <div
+                              role="listbox"
+                              className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 max-h-[290px] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(6,42,87,0.14)]"
+                            >
+                              {phoneCountryOptions.map((option) => {
+                                const isSelected = formData.phoneCountry === option.iso;
+                                return (
+                                  <button
+                                    key={`${option.iso}-${option.label}`}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => {
+                                      setFormData({ ...formData, phoneCountry: option.iso });
+                                      setIsPhoneCountryOpen(false);
+                                      if (normalizePhone(formData.emailOuTelefone, option.iso)) clearFieldErrors("emailOuTelefone");
+                                      trackEvent("cvi_phone_country_selected", { country: option.iso, dial_code: option.dialCode });
+                                    }}
+                                    className={`flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-all duration-150 ${
+                                      isSelected
+                                        ? "bg-primary text-white"
+                                        : "text-navy hover:bg-blue-soft"
+                                    }`}
+                                  >
+                                    <span className="flex min-w-0 flex-1 items-center gap-3">
+                                      <DestinationFlag code={option.flagCode} />
+                                      <span className="truncate text-[14px] font-extrabold">{option.label}</span>
+                                    </span>
+                                    <span className={`text-[13px] font-black ${isSelected ? "text-white" : "text-primary"}`}>{option.dialCode}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                         {errors.emailOuTelefone && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.emailOuTelefone}</span>}
                       </div>
@@ -2401,6 +2952,12 @@ export default function Home() {
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Tutor</strong>{formData.nomeTutor}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">WhatsApp</strong>{formData.emailOuTelefone}</span>
                           <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Pet</strong>{confirmationPetSummary}</span>
+                          {formData.racaPet.trim() && (
+                            <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Raça</strong>{formData.racaPet.trim()}</span>
+                          )}
+                          {formData.procedimentosVeterinarios.length > 0 && (
+                            <span><strong className="block text-[10px] uppercase tracking-wider text-text-muted">Procedimentos</strong>{formData.procedimentosVeterinarios.join(", ")}</span>
+                          )}
                         </div>
                       </div>
 

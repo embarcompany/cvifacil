@@ -18,6 +18,18 @@ const getNumber = (payload: LeadSubmissionPayload, key: string) => {
 
 const getBoolean = (payload: LeadSubmissionPayload, key: string) => payload[key] === true;
 
+const getStringArray = (payload: LeadSubmissionPayload, key: string) => {
+  const value = payload[key];
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+};
+
+const getPlainObject = (payload: LeadSubmissionPayload, key: string) => {
+  const value = payload[key];
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+};
+
 const getUuid = (payload: LeadSubmissionPayload, key: string) => {
   const value = getString(payload, key);
   if (!value) return null;
@@ -32,6 +44,10 @@ const nonCriticalColumns = [
   "whatsapp_country",
   "whatsapp_country_code",
   "whatsapp_international",
+  "raca_pet",
+  "procedimentos_veterinarios",
+  "procedimentos_veterinarios_texto",
+  "tracking_params",
   "gbraid",
   "wbraid",
   "dclid",
@@ -48,6 +64,8 @@ const nonCriticalColumns = [
   "src",
   "sck",
   "utm_date",
+  "tt_lead_id",
+  "tt_session_id",
 ] as const;
 
 const shouldRetryWithoutNonCriticalColumns = (status: number, responseText: string) => {
@@ -115,8 +133,12 @@ export async function POST(request: Request) {
     pet_summary: getString(payload, "pet_summary"),
     mais_de_um_pet: getBoolean(payload, "mais_de_um_pet"),
     tipo_pet: getString(payload, "tipo_pet"),
+    raca_pet: getString(payload, "raca_pet"),
+    procedimentos_veterinarios: getStringArray(payload, "procedimentos_veterinarios"),
+    procedimentos_veterinarios_texto: getString(payload, "procedimentos_veterinarios_texto"),
     page_url: getString(payload, "page_url"),
     user_agent: getString(payload, "user_agent"),
+    tracking_params: getPlainObject(payload, "tracking_params"),
     utm_source: getString(payload, "utm_source"),
     utm_medium: getString(payload, "utm_medium"),
     utm_campaign: getString(payload, "utm_campaign"),
@@ -140,6 +162,8 @@ export async function POST(request: Request) {
     src: getString(payload, "src"),
     sck: getString(payload, "sck"),
     utm_date: getString(payload, "utm_date"),
+    tt_lead_id: getString(payload, "tt_lead_id"),
+    tt_session_id: getString(payload, "tt_session_id"),
     raw_payload: payload,
   };
 

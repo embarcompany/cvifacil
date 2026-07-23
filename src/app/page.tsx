@@ -527,7 +527,6 @@ function inferPhoneCountryFromTypedDdi(value: string, currentCountry: CountryCod
 function inferPhoneCountryByTimezone(): CountryCode | null {
   try {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-    const language = (navigator.language || "").toLowerCase();
 
     if (
       timeZone.startsWith("America/Sao_Paulo") ||
@@ -564,12 +563,6 @@ function inferPhoneCountryByTimezone(): CountryCode | null {
     if (timeZone.startsWith("Australia/")) return "AU";
     if (timeZone.startsWith("Asia/Tokyo")) return "JP";
 
-    if (language.includes("pt-br")) return "BR";
-    if (language.includes("pt-pt")) return "PT";
-    if (language.includes("es-mx")) return "MX";
-    if (language.includes("es-co")) return "CO";
-    if (language.includes("en-us")) return "US";
-    if (language.includes("en-ca")) return "CA";
   } catch {
     return null;
   }
@@ -580,12 +573,15 @@ function inferPhoneCountryByTimezone(): CountryCode | null {
 function detectDefaultPhoneCountry(): CountryCode {
   if (typeof navigator === "undefined") return "BR";
 
+  const timezoneMatch = inferPhoneCountryByTimezone();
+  if (timezoneMatch) return timezoneMatch;
+
   const language = navigator.language || "";
   const countryFromLocale = language.includes("-") ? language.split("-").pop()?.toUpperCase() : "";
   const localeMatch = phoneCountryOptions.find((option) => option.iso === countryFromLocale);
   if (localeMatch) return localeMatch.iso;
 
-  return inferPhoneCountryByTimezone() ?? "BR";
+  return "BR";
 }
 
 function normalizePhoneNumberDigits(rawPhone: string, manualCountry: CountryCode) {

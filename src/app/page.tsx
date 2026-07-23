@@ -479,6 +479,10 @@ const phoneCountryOptions: { iso: CountryCode; label: string; dialCode: string; 
 const veterinaryProcedureOptions = ["Microchip", "Vacina", "Exame de Sorologia"];
 const noVeterinaryProcedureOption = "Nenhum procedimento realizado";
 
+function keepOnlyLettersAndSpaces(value: string) {
+  return value.replace(/[^\p{L}\s]/gu, "").replace(/\s{2,}/g, " ");
+}
+
 const ddiLengthConfig: Record<string, number[]> = {
   "55": [8, 9, 10, 11],
   "1": [10],
@@ -1399,6 +1403,12 @@ export default function Home() {
     const totalPets = formData.qtdGatos + formData.qtdCachorros;
     if (totalPets === 0) {
       newErrors.tipoPet = "Por favor, adicione pelo menos um pet (gato ou cachorro) para continuar";
+    }
+    if (!formData.racaPet.trim()) {
+      newErrors.racaPet = "Informe a raça do pet ou marque que não tem raça definida";
+    }
+    if (formData.procedimentosVeterinarios.length === 0) {
+      newErrors.procedimentosVeterinarios = "Selecione os procedimentos realizados ou marque nenhum procedimento";
     }
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
@@ -2559,19 +2569,26 @@ export default function Home() {
                               placeholder="Ex: Golden, SRD, Persa"
                               autoComplete="off"
                               disabled={formData.racaPet === "Sem raça definida"}
-                              className="pl-12 w-full h-[60px] px-4 rounded-xl border border-gray-200 bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-text-muted"
+                              className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-text-muted ${errors.racaPet ? "border-red-500 focus:ring-red-500/10" : "border-gray-200"}`}
                               value={formData.racaPet}
-                              onChange={(e) => setFormData({ ...formData, racaPet: e.target.value })}
+                              onChange={(e) => {
+                                const value = keepOnlyLettersAndSpaces(e.target.value);
+                                setFormData({ ...formData, racaPet: value });
+                                if (value.trim()) clearFieldErrors("racaPet");
+                              }}
                             />
                           </div>
                           <label className="flex min-h-10 w-fit cursor-pointer items-center gap-2 py-1 text-[13px] font-bold text-text-muted">
                             <input
                               type="checkbox"
                               checked={formData.racaPet === "Sem raça definida"}
-                              onChange={(event) => setFormData({
-                                ...formData,
-                                racaPet: event.target.checked ? "Sem raça definida" : "",
-                              })}
+                              onChange={(event) => {
+                                setFormData({
+                                  ...formData,
+                                  racaPet: event.target.checked ? "Sem raça definida" : "",
+                                });
+                                if (event.target.checked) clearFieldErrors("racaPet");
+                              }}
                               className="sr-only"
                             />
                             <span className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
@@ -2581,6 +2598,7 @@ export default function Home() {
                             </span>
                             Não tem raça definida
                           </label>
+                          {errors.racaPet && <span className="text-red-500 text-xs font-bold">{errors.racaPet}</span>}
                         </div>
 
                         <div className="flex flex-col gap-1.5">
@@ -2588,13 +2606,18 @@ export default function Home() {
                           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                             {veterinaryProcedureOptions.map((procedure) => {
                               const isChecked = formData.procedimentosVeterinarios.includes(procedure);
+                              const noProcedureSelected = formData.procedimentosVeterinarios.includes(noVeterinaryProcedureOption);
                               return (
                                 <label
                                   key={procedure}
                                   className={`flex min-h-[74px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border px-1.5 text-center text-[10.5px] font-extrabold transition-all duration-200 sm:min-h-[54px] sm:flex-row sm:gap-2 sm:px-3 sm:text-left sm:text-[12.5px] ${
                                     isChecked
                                       ? "border-primary bg-primary text-white shadow-[0_6px_16px_rgba(17,130,186,0.14)]"
-                                      : "border-gray-200 bg-white text-text-muted hover:border-primary/40 hover:bg-blue-soft/40"
+                                      : noProcedureSelected
+                                        ? "border-gray-200 bg-gray-50 text-text-muted/55 line-through"
+                                        : errors.procedimentosVeterinarios
+                                          ? "border-red-300 bg-red-50/40 text-text-muted"
+                                          : "border-gray-200 bg-white text-text-muted hover:border-primary/40 hover:bg-blue-soft/40"
                                   }`}
                                 >
                                   <input
@@ -2607,6 +2630,7 @@ export default function Home() {
                                         ? formData.procedimentosVeterinarios.filter((item) => item !== procedure)
                                         : [...formData.procedimentosVeterinarios.filter((item) => item !== noVeterinaryProcedureOption), procedure];
                                       setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
+                                      clearFieldErrors("procedimentosVeterinarios");
                                       trackEvent("cvi_veterinary_procedure_changed", { procedure, selected: !isChecked });
                                     }}
                                     className="sr-only"
@@ -2628,6 +2652,7 @@ export default function Home() {
                               onChange={(event) => {
                                 const nextProcedures = event.target.checked ? [noVeterinaryProcedureOption] : [];
                                 setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
+                                if (event.target.checked) clearFieldErrors("procedimentosVeterinarios");
                                 trackEvent("cvi_veterinary_procedure_changed", {
                                   procedure: noVeterinaryProcedureOption,
                                   selected: event.target.checked,
@@ -2642,6 +2667,7 @@ export default function Home() {
                             </span>
                             Nenhum procedimento realizado
                           </label>
+                          {errors.procedimentosVeterinarios && <span className="text-red-500 text-xs font-bold">{errors.procedimentosVeterinarios}</span>}
                         </div>
                       </div>
 
@@ -2670,17 +2696,21 @@ export default function Home() {
 
                       {/* 2. Cidade de Origem */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Cidade de origem</label>
+                        <label htmlFor="origin_city" className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Cidade de origem</label>
                         <div className="relative flex items-center">
                           <Compass className="absolute left-4 w-5 h-5 text-gray-400 pointer-events-none" />
                           <input 
+                            id="origin_city"
+                            name="origin_city"
                             type="text"
                             placeholder="De qual cidade você vai partir?"
+                            autoComplete="address-level2"
                             className={`pl-12 w-full h-[60px] px-4 rounded-xl border bg-white focus:bg-white font-medium text-[16px] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/12 focus:border-primary ${errors.cidadeOrigem ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200'}`}
                             value={formData.cidadeOrigem}
                             onChange={(e) => {
-                              setFormData({ ...formData, cidadeOrigem: e.target.value });
-                              if (e.target.value.trim()) clearFieldErrors("cidadeOrigem");
+                              const value = keepOnlyLettersAndSpaces(e.target.value);
+                              setFormData({ ...formData, cidadeOrigem: value });
+                              if (value.trim()) clearFieldErrors("cidadeOrigem");
                             }}
                           />
                         </div>

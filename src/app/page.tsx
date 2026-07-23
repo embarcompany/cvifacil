@@ -2220,7 +2220,7 @@ export default function Home() {
             <div className="relative flex flex-col lg:flex-row gap-6 lg:gap-6 justify-between max-w-5xl mx-auto px-0 lg:px-0">
               {/* Background Dashed Lines */}
               <div className="hidden lg:block absolute top-6 left-[8%] right-[8%] h-[2px] border-t-2 border-dashed border-primary/20 z-0" />
-              <div className="block lg:hidden absolute top-5 bottom-5 left-6 w-[2px] border-l-2 border-dashed border-primary/25 z-0" />
+              <div className="block lg:hidden absolute top-5 bottom-5 left-1/2 -translate-x-1/2 w-[2px] border-l-2 border-dashed border-primary/25 z-0" />
 
               {[
                 { icon: (isLast: boolean) => <Plane className={`w-6 h-6 text-primary/70 transition-colors duration-300 group-hover:text-white`} />, title: "1. Atendimento", text: "Entendemos o destino e as exigências do pet.", isLast: false },
@@ -2232,7 +2232,7 @@ export default function Home() {
                 return (
                   <div 
                     key={idx} 
-                    className="group relative flex flex-row lg:flex-col items-start lg:items-center gap-4 lg:gap-5 flex-grow flex-1 z-10 font-sans transition-all duration-300 lg:hover:-translate-y-1 lg:hover:scale-[1.02]"
+                    className="group relative flex flex-col items-center gap-3 lg:gap-5 flex-grow flex-1 z-10 text-center font-sans transition-all duration-300 lg:hover:-translate-y-1 lg:hover:scale-[1.02]"
                   >
                     {/* Circle Indicator */}
                     <div className={`relative shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center z-15 transition-all duration-300 ${
@@ -2249,11 +2249,11 @@ export default function Home() {
                     </div>
 
                     {/* Step description */}
-                    <div className="flex-1 lg:text-center mt-1 lg:mt-0 transition-all duration-300 opacity-100">
+                    <div className="flex-1 text-center transition-all duration-300 opacity-100">
                       <h3 className="text-[17px] sm:text-[18px] font-extrabold mb-1.5 leading-tight transition-colors duration-300 text-navy">
                         {step.title}
                       </h3>
-                      <p className="text-[14.5px] sm:text-[15px] leading-[1.55] max-w-[260px] lg:mx-auto font-sans transition-colors duration-300 text-text-muted">
+                      <p className="mx-auto text-[14.5px] sm:text-[15px] leading-[1.55] max-w-[280px] font-sans transition-colors duration-300 text-text-muted">
                         {step.text}
                       </p>
                     </div>

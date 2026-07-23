@@ -2584,13 +2584,13 @@ export default function Home() {
 
                         <div className="flex flex-col gap-1.5">
                           <span className="text-[13px] font-extrabold text-navy uppercase tracking-wider">Seu pet já realizou estes procedimentos?</span>
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                             {veterinaryProcedureOptions.map((procedure) => {
                               const isChecked = formData.procedimentosVeterinarios.includes(procedure);
                               return (
                                 <label
                                   key={procedure}
-                                  className={`flex min-h-[54px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-[12.5px] font-extrabold transition-all duration-200 ${
+                                  className={`flex min-h-[74px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border px-1.5 text-center text-[10.5px] font-extrabold transition-all duration-200 sm:min-h-[54px] sm:flex-row sm:gap-2 sm:px-3 sm:text-left sm:text-[12.5px] ${
                                     isChecked
                                       ? "border-primary bg-primary text-white shadow-[0_6px_16px_rgba(17,130,186,0.14)]"
                                       : "border-gray-200 bg-white text-text-muted hover:border-primary/40 hover:bg-blue-soft/40"
@@ -2610,7 +2610,7 @@ export default function Home() {
                                     }}
                                     className="sr-only"
                                   />
-                                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border transition-all ${
                                     isChecked ? "border-white bg-white text-primary" : "border-gray-300 bg-white text-transparent"
                                   }`}>
                                     <Check className="h-3.5 w-3.5" strokeWidth={3} />

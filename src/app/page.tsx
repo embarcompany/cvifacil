@@ -1048,7 +1048,7 @@ export default function Home() {
     const encodedText = encodeURIComponent(text);
     setTimeout(() => {
       setSubmittedWhatsAppUrl(`https://wa.me/${whatsappNumber}?text=${encodedText}`);
-      setFormStep(3);
+      setFormStep(4);
       setIsSubmitting(false);
     }, 800);
   };
@@ -1209,9 +1209,9 @@ export default function Home() {
       const persistedStep = persistedState?.formStep;
 
       setFormData(persistedFormData);
-      setFormStep(persistedStep && persistedStep >= 1 && persistedStep <= 2 ? persistedStep : 1);
+      setFormStep(persistedStep && persistedStep >= 1 && persistedStep <= 3 ? persistedStep : 1);
       setShowQuantityCounters((persistedFormData.qtdGatos + persistedFormData.qtdCachorros) > 1);
-      setSubmittedWhatsAppUrl(persistedState?.formStep === 3 ? "" : persistedState?.submittedWhatsAppUrl ?? "");
+      setSubmittedWhatsAppUrl(persistedState?.formStep === 4 ? "" : persistedState?.submittedWhatsAppUrl ?? "");
       setIsMounted(true);
     });
 
@@ -1239,8 +1239,8 @@ export default function Home() {
       form_id: "cvi_lead_form",
       form_name: "CVI Fácil Lead Form",
       form_step: stepOverride,
-      form_step_name: stepOverride === 1 ? "pet_e_viagem" : stepOverride === 2 ? "tutor_e_contato" : "confirmacao",
-      form_completed: stepOverride === 3,
+      form_step_name: stepOverride === 1 ? "pet" : stepOverride === 2 ? "viagem" : stepOverride === 3 ? "tutor_e_contato" : "confirmacao",
+      form_completed: stepOverride === 4,
       destination: destination || null,
       destination_type: formData.paisDestino || null,
       travel_window: formData.dataViagem || null,
@@ -1271,7 +1271,7 @@ export default function Home() {
   useEffect(() => {
     if (!isMounted) return;
 
-    if (formStep === 3) {
+    if (formStep === 4) {
       formAbandonmentTrackedRef.current = true;
       return;
     }
@@ -1313,7 +1313,7 @@ export default function Home() {
   useEffect(() => {
     if (!isMounted) return;
 
-    if (formStep === 3) {
+    if (formStep === 4) {
       clearPersistedFormState();
       return;
     }
@@ -1413,10 +1413,10 @@ export default function Home() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) {
-      trackEvent("cvi_step_2_completed", getFormAnalyticsContext(1));
+      trackEvent("cvi_step_2_completed", getFormAnalyticsContext(2));
     } else {
       trackEvent("cvi_form_error", {
-        ...getFormAnalyticsContext(1),
+        ...getFormAnalyticsContext(2),
         error_step: 2,
         error_fields: Object.keys(newErrors),
       });
@@ -1446,10 +1446,10 @@ export default function Home() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) {
-      trackEvent("cvi_step_3_completed", getFormAnalyticsContext(2));
+      trackEvent("cvi_step_3_completed", getFormAnalyticsContext(3));
     } else {
       trackEvent("cvi_form_error", {
-        ...getFormAnalyticsContext(2),
+        ...getFormAnalyticsContext(3),
         error_step: 3,
         error_fields: Object.keys(newErrors),
       });
@@ -2297,46 +2297,46 @@ export default function Home() {
                 
 
 
-                {/* 1 Passo 1 ━━━━━━━━━ 2 Passo 2 */}
-                <div className="flex items-center justify-between pb-5 select-none">
-                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
-                      formStep === 1 
-                        ? "bg-primary text-white" 
-                        : "bg-whatsapp text-white"
-                    }`}>
-                      {formStep > 1 ? "✓" : "1"}
+                {formStep < 4 && (
+                  <>
+                    <div className="flex items-center justify-between pb-5 select-none">
+                      {[
+                        { step: 1, label: "Pet" },
+                        { step: 2, label: "Viagem" },
+                        { step: 3, label: "Tutor" },
+                      ].map((item, index) => {
+                        const isActive = formStep === item.step;
+                        const isDone = formStep > item.step;
+                        return (
+                          <React.Fragment key={item.step}>
+                            <div className="flex min-w-0 flex-col items-center gap-1 sm:flex-row sm:gap-2">
+                              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-black transition-all ${
+                                isActive
+                                  ? "bg-primary text-white"
+                                  : isDone
+                                    ? "bg-whatsapp text-white"
+                                    : "bg-gray-100 text-gray-400"
+                              }`}>
+                                {isDone ? "✓" : item.step}
+                              </div>
+                              <span className={`text-[12px] font-bold sm:text-[13px] ${
+                                isActive ? "text-navy font-black" : "text-gray-400"
+                              }`}>
+                                {item.label}
+                              </span>
+                            </div>
+                            {index < 2 && (
+                              <div className={`mx-2 h-[2px] flex-1 transition-colors sm:mx-4 ${
+                                formStep > item.step ? "bg-primary" : "bg-gray-100"
+                              }`} />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </div>
-                    <span className={`text-[13px] font-bold ${
-                      formStep === 1 ? "text-navy font-black" : "text-gray-400"
-                    }`}>
-                      Passo 1
-                    </span>
-                  </div>
-                  
-                  <div className={`flex-1 h-[2px] mx-4 transition-colors ${
-                    formStep > 1 ? "bg-primary" : "bg-gray-100"
-                  }`} />
-
-                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black transition-all ${
-                      formStep === 2 
-                        ? "bg-primary text-white" 
-                        : formStep > 2
-                          ? "bg-whatsapp text-white"
-                          : "bg-gray-100 text-gray-400"
-                    }`}>
-                      {formStep > 2 ? "✓" : "2"}
-                    </div>
-                    <span className={`text-[13px] font-bold ${
-                      formStep === 2 ? "text-navy font-black" : "text-gray-400"
-                    }`}>
-                      Passo 2
-                    </span>
-                  </div>
-
-                </div>
-                <div className="h-px bg-gray-100 mb-6" />
+                    <div className="h-px bg-gray-100 mb-6" />
+                  </>
+                )}
 
                 <form onSubmit={handleFormSubmit} className="flex flex-col gap-5 sm:gap-5">
                   
@@ -2555,9 +2555,9 @@ export default function Home() {
                               return (
                                 <label
                                   key={procedure}
-                                  className={`flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13px] font-extrabold transition-all duration-200 ${
+                                  className={`flex min-h-[54px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-[12.5px] font-extrabold transition-all duration-200 ${
                                     isChecked
-                                      ? "border-primary bg-blue-soft text-primary"
+                                      ? "border-primary bg-primary text-white shadow-[0_6px_16px_rgba(17,130,186,0.14)]"
                                       : "border-gray-200 bg-white text-text-muted hover:border-primary/40 hover:bg-blue-soft/40"
                                   }`}
                                 >
@@ -2573,8 +2573,13 @@ export default function Home() {
                                       setFormData({ ...formData, procedimentosVeterinarios: nextProcedures });
                                       trackEvent("cvi_veterinary_procedure_changed", { procedure, selected: !isChecked });
                                     }}
-                                    className="h-4 w-4 accent-primary"
+                                    className="sr-only"
                                   />
+                                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                    isChecked ? "border-white bg-white text-primary" : "border-gray-300 bg-white text-transparent"
+                                  }`}>
+                                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                                  </span>
                                   <span className="leading-tight">{procedure}</span>
                                 </label>
                               );
@@ -2582,6 +2587,29 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (validateStep1()) {
+                            setFormStep(2);
+                            trackEvent("cvi_step_2_started");
+                            if (window.innerWidth < 1024) {
+                              smoothScrollToTarget("avaliacao");
+                            }
+                          }
+                        }}
+                        className="group mt-2 flex min-h-[62px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-bold uppercase tracking-wide text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-dark hover:brightness-[0.95]"
+                      >
+                        <span>Avançar para viagem</span>
+                        <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* STEP 2: TRAVEL DETAILS */}
+                  {formStep === 2 && (
+                    <div className="flex flex-col gap-4 animate-fade-in">
 
                       {/* 2. Cidade de Origem */}
                       <div className="flex flex-col gap-1.5">
@@ -2756,27 +2784,41 @@ export default function Home() {
                         {errors.dataViagem && <span className="text-red-500 text-xs font-bold mt-0.5">{errors.dataViagem}</span>}
                       </div>
 
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          if (validateStep1() && validateStep2()) {
-                            setFormStep(2);
-                            trackEvent("cvi_step_2_started");
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormStep(1);
                             if (window.innerWidth < 1024) {
                               smoothScrollToTarget("avaliacao");
                             }
-                          }
-                        }}
-                        className="group mt-2 w-full min-h-[62px] font-bold rounded-xl bg-primary hover:bg-primary-dark text-white text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 filter hover:brightness-[0.95]"
-                      >
-                        <span>Avançar para o Passo 2</span>
-                        <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" strokeWidth={2.5} />
-                      </button>
+                          }}
+                          className="w-full sm:w-1/3 min-h-[56px] font-extrabold rounded-xl border-2 border-gray-200 text-text-muted hover:border-gray-300 transition-all duration-200 bg-white"
+                        >
+                          Voltar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (validateStep2()) {
+                              setFormStep(3);
+                              trackEvent("cvi_step_3_started");
+                              if (window.innerWidth < 1024) {
+                                smoothScrollToTarget("avaliacao");
+                              }
+                            }
+                          }}
+                          className="group flex-1 min-h-[62px] font-bold rounded-xl bg-primary hover:bg-primary-dark text-white text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 filter hover:brightness-[0.95]"
+                        >
+                          <span>Avançar para tutor</span>
+                          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" strokeWidth={2.5} />
+                        </button>
+                      </div>
                     </div>
                   )}
 
-                  {/* STEP 2: TUTOR, PET AGE, AND WHATSAPP */}
-                  {formStep === 2 && (
+                  {/* STEP 3: TUTOR AND WHATSAPP */}
+                  {formStep === 3 && (
                     <div className="flex flex-col gap-4 animate-fade-in">
                       
 
@@ -2900,7 +2942,7 @@ export default function Home() {
                         <button 
                           type="button" 
                           onClick={() => {
-                            setFormStep(1);
+                            setFormStep(2);
                             if (window.innerWidth < 1024) {
                               smoothScrollToTarget("avaliacao");
                             }
@@ -2927,8 +2969,8 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* STEP 3: CONFIRMATION AND WHATSAPP HANDOFF */}
-                  {formStep === 3 && (
+                  {/* STEP 4: CONFIRMATION AND WHATSAPP HANDOFF */}
+                  {formStep === 4 && (
                     <div id="sucesso-mensagem" className="success-complete flex flex-col gap-5 text-center">
                       <div className="success-complete-icon mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-whatsapp shadow-[0_8px_20px_rgba(5,184,92,0.12)]">
                         <span className="success-complete-ring" />
